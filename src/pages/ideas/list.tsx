@@ -47,41 +47,29 @@ type ScrapedHook = {
   viral_tier: string | null;
 };
 
+// 6 consolidated categories (Session 40 migration)
 const CATEGORY_LABEL: Record<string, string> = {
-  darmgesundheit: "Darm",
   hormone: "Hormone",
   schilddruese: "Schilddrüse",
-  blutzucker: "Blutzucker",
-  ernaehrung: "Ernährung",
-  schlaf: "Schlaf",
-  stress: "Stress",
-  bewegung: "Bewegung",
+  stoffwechsel: "Stoffwechsel",
+  regeneration: "Regeneration",
   mindset: "Mindset",
-  sonstiges: "Sonstiges",
+  bewegung: "Bewegung",
 };
 
-// Pastel color palette per category (works in both light and dark mode via opacity)
 const CATEGORY_COLOR: Record<string, string> = {
-  darmgesundheit:
-    "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200 border-amber-200/60 dark:border-amber-800/60",
   hormone:
     "bg-rose-100 text-rose-900 dark:bg-rose-900/40 dark:text-rose-200 border-rose-200/60 dark:border-rose-800/60",
   schilddruese:
     "bg-sky-100 text-sky-900 dark:bg-sky-900/40 dark:text-sky-200 border-sky-200/60 dark:border-sky-800/60",
-  blutzucker:
-    "bg-orange-100 text-orange-900 dark:bg-orange-900/40 dark:text-orange-200 border-orange-200/60 dark:border-orange-800/60",
-  ernaehrung:
-    "bg-lime-100 text-lime-900 dark:bg-lime-900/40 dark:text-lime-200 border-lime-200/60 dark:border-lime-800/60",
-  schlaf:
+  stoffwechsel:
+    "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200 border-amber-200/60 dark:border-amber-800/60",
+  regeneration:
     "bg-indigo-100 text-indigo-900 dark:bg-indigo-900/40 dark:text-indigo-200 border-indigo-200/60 dark:border-indigo-800/60",
-  stress:
-    "bg-red-100 text-red-900 dark:bg-red-900/40 dark:text-red-200 border-red-200/60 dark:border-red-800/60",
-  bewegung:
-    "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-200 border-emerald-200/60 dark:border-emerald-800/60",
   mindset:
     "bg-violet-100 text-violet-900 dark:bg-violet-900/40 dark:text-violet-200 border-violet-200/60 dark:border-violet-800/60",
-  sonstiges:
-    "bg-slate-100 text-slate-900 dark:bg-slate-800/60 dark:text-slate-200 border-slate-200/60 dark:border-slate-700/60",
+  bewegung:
+    "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-200 border-emerald-200/60 dark:border-emerald-800/60",
 };
 
 const PATTERN_LABEL: Record<string, string> = {
