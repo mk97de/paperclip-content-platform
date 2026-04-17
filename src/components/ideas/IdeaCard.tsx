@@ -1,4 +1,5 @@
 import { useUpdate, useCreate } from "@refinedev/core";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ThumbsUp,
   ThumbsDown,
@@ -67,6 +68,7 @@ type Props = {
 };
 
 export function IdeaCard({ idea, source, variant, onFeedback }: Props) {
+  const queryClient = useQueryClient();
   const {
     mutate: updateIdea,
     mutation: { isPending: isUpdating },
@@ -74,6 +76,10 @@ export function IdeaCard({ idea, source, variant, onFeedback }: Props) {
   const { mutate: createPost, mutation: { isPending: isCreating } } = useCreate();
 
   const busy = isUpdating || isCreating;
+
+  const invalidateIdeas = () => {
+    queryClient.invalidateQueries({ queryKey: ["hook_ideas_grid"] });
+  };
 
   const setStatus = (status: HookIdea["status"], label: string) => {
     updateIdea(
@@ -84,7 +90,10 @@ export function IdeaCard({ idea, source, variant, onFeedback }: Props) {
         successNotification: false,
       },
       {
-        onSuccess: () => toast.success(label),
+        onSuccess: () => {
+          toast.success(label);
+          invalidateIdeas();
+        },
         onError: (e) => toast.error(`Fehler: ${e.message}`),
       }
     );
@@ -112,7 +121,11 @@ export function IdeaCard({ idea, source, variant, onFeedback }: Props) {
               successNotification: false,
             },
             {
-              onSuccess: () => toast.success("In Pipeline übernommen"),
+              onSuccess: () => {
+                toast.success("In Pipeline übernommen");
+                invalidateIdeas();
+                queryClient.invalidateQueries({ queryKey: ["content_posts"] });
+              },
               onError: (e) => toast.error(`Fehler: ${e.message}`),
             }
           );

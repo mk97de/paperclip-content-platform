@@ -61,7 +61,7 @@ export function PatternBadge({ pattern, className }: Props) {
               <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
                 Beispiel
               </p>
-              <p className="text-sm italic border-l-2 pl-3">{def.example}</p>
+              <p className="text-sm italic border-l-2 pl-3">{def.examples[0]}</p>
             </div>
             <div>
               <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
@@ -91,7 +91,7 @@ export function PatternBadge({ pattern, className }: Props) {
           <p className="font-semibold">{def.label}</p>
           <p className="text-xs">{def.definition}</p>
           <p className="text-xs italic border-l-2 pl-2 opacity-80">
-            {def.example}
+            {def.examples[0]}
           </p>
           <p className="text-[10px] uppercase tracking-wider opacity-70">
             Best: {def.bestFormat}

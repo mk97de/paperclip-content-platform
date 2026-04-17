@@ -6,7 +6,9 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
+  closestCorners,
   type DragEndEvent,
+  type DragOverEvent,
   DragOverlay,
   type DragStartEvent,
 } from "@dnd-kit/core";
@@ -17,6 +19,7 @@ import { KanbanColumn } from "./KanbanColumn";
 import { PostCard } from "./PostCard";
 import {
   PIPELINE_COLUMNS,
+  isPipelineStatus,
   type ContentPost,
   type PipelineStatus,
 } from "./types";
@@ -38,7 +41,7 @@ export function KanbanBoard() {
   const [optimistic, setOptimistic] = useState<Record<number, PipelineStatus>>({});
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
   );
 
@@ -53,8 +56,8 @@ export function KanbanBoard() {
     };
     for (const p of posts) {
       const effectiveStatus = optimistic[p.id] ?? p.status;
-      if (effectiveStatus in g) {
-        g[effectiveStatus as PipelineStatus].push({ ...p, status: effectiveStatus });
+      if (isPipelineStatus(effectiveStatus)) {
+        g[effectiveStatus].push({ ...p, status: effectiveStatus });
       }
     }
     return g;
@@ -64,21 +67,57 @@ export function KanbanBoard() {
     ? posts.find((p) => p.id === activeId) ?? null
     : null;
 
+  const resolveColumn = (overId: string | number | null): PipelineStatus | null => {
+    if (overId == null) return null;
+    if (typeof overId === "string" && isPipelineStatus(overId)) return overId;
+    const numId = Number(overId);
+    if (!Number.isNaN(numId)) {
+      const target = posts.find((p) => p.id === numId);
+      if (target) {
+        const s = optimistic[target.id] ?? target.status;
+        return isPipelineStatus(s) ? s : null;
+      }
+    }
+    return null;
+  };
+
   const onDragStart = (e: DragStartEvent) => {
     setActiveId(Number(e.active.id));
   };
 
-  const onDragEnd = (e: DragEndEvent) => {
-    setActiveId(null);
-    if (!e.over) return;
+  const onDragOver = (e: DragOverEvent) => {
     const postId = Number(e.active.id);
-    const newStatus = String(e.over.id) as PipelineStatus;
+    const newStatus = resolveColumn(e.over?.id ?? null);
+    if (!newStatus) return;
     const post = posts.find((p) => p.id === postId);
     if (!post) return;
     const prevStatus = optimistic[postId] ?? post.status;
     if (prevStatus === newStatus) return;
-
     setOptimistic((m) => ({ ...m, [postId]: newStatus }));
+  };
+
+  const onDragEnd = (e: DragEndEvent) => {
+    setActiveId(null);
+    const postId = Number(e.active.id);
+    const newStatus = resolveColumn(e.over?.id ?? null);
+    if (!newStatus) {
+      setOptimistic((m) => {
+        const next = { ...m };
+        delete next[postId];
+        return next;
+      });
+      return;
+    }
+    const post = posts.find((p) => p.id === postId);
+    if (!post) return;
+    if (post.status === newStatus) {
+      setOptimistic((m) => {
+        const next = { ...m };
+        delete next[postId];
+        return next;
+      });
+      return;
+    }
 
     updatePost(
       {
@@ -89,8 +128,13 @@ export function KanbanBoard() {
       },
       {
         onSuccess: () => {
-          toast.success(`→ ${newStatus}`);
+          toast.success(`→ ${PIPELINE_COLUMNS.find((c) => c.status === newStatus)?.label ?? newStatus}`);
           refetch();
+          setOptimistic((m) => {
+            const next = { ...m };
+            delete next[postId];
+            return next;
+          });
         },
         onError: (err) => {
           toast.error(`Fehler: ${err.message}`);
@@ -123,7 +167,9 @@ export function KanbanBoard() {
   return (
     <DndContext
       sensors={sensors}
+      collisionDetection={closestCorners}
       onDragStart={onDragStart}
+      onDragOver={onDragOver}
       onDragEnd={onDragEnd}
     >
       <div className="flex gap-4 overflow-x-auto pb-4 md:grid md:grid-cols-3 lg:grid-cols-6 md:overflow-visible">
@@ -137,7 +183,7 @@ export function KanbanBoard() {
         ))}
       </div>
       <DragOverlay>
-        {activePost ? <PostCard post={activePost} /> : null}
+        {activePost ? <PostCard post={activePost} dragOverlay /> : null}
       </DragOverlay>
     </DndContext>
   );

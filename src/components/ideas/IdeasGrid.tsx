@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { useList } from "@refinedev/core";
 import { useQuery } from "@tanstack/react-query";
 import { readItems } from "@directus/sdk";
 import { AnimatePresence } from "framer-motion";
@@ -25,6 +24,20 @@ type Props = {
   emptyDescription?: string;
 };
 
+const IDEA_FIELDS = [
+  "id",
+  "adapted_hook_text",
+  "category",
+  "hook_pattern",
+  "target_audience",
+  "rationale",
+  "status",
+  "martin_feedback",
+  "scraped_hook_source_id",
+  "eval_score",
+  "date_created",
+];
+
 export function IdeasGrid({
   title,
   subtitle,
@@ -38,25 +51,32 @@ export function IdeasGrid({
   const [feedbackIdea, setFeedbackIdea] = useState<HookIdea | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 
-  const filters = useMemo(() => {
-    const list: Array<{ field: string; operator: string; value: unknown }> = [];
-    if (status) list.push({ field: "status", operator: "eq", value: status });
-    if (onlyCommented)
-      list.push({ field: "martin_feedback", operator: "nnull", value: true });
-    return list;
-  }, [status, onlyCommented]);
+  const filterKey = `${status ?? "any"}-${onlyCommented ? "commented" : "all"}`;
 
   const {
-    result,
-    query: { isLoading, isError },
-  } = useList<HookIdea>({
-    resource: "hook_ideas",
-    filters: filters as never,
-    sorters: [{ field: onlyCommented ? "date_updated" : "date_created", order: "desc" }],
-    pagination: { pageSize: 200 },
+    data: ideasData,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ["hook_ideas_grid", filterKey],
+    queryFn: async () => {
+      const filter: Record<string, unknown> = {};
+      if (status) filter.status = { _eq: status };
+      if (onlyCommented) filter.martin_feedback = { _nnull: true };
+      return directusClient.request(
+        readItems("hook_ideas" as never, {
+          filter,
+          fields: IDEA_FIELDS,
+          sort: [onlyCommented ? "-date_updated" : "-date_created"],
+          limit: 200,
+        } as never)
+      ) as Promise<HookIdea[]>;
+    },
+    staleTime: 30_000,
   });
 
-  const allIdeas = result?.data ?? [];
+  const allIdeas = ideasData ?? [];
 
   const sourceIds = useMemo(
     () =>
@@ -130,8 +150,11 @@ export function IdeasGrid({
 
   if (isError) {
     return (
-      <div className="p-8 text-center text-destructive">
-        Fehler beim Laden der Hook-Ideen.
+      <div className="p-8 text-center space-y-2">
+        <p className="text-destructive">Fehler beim Laden der Hook-Ideen.</p>
+        <Button variant="outline" size="sm" onClick={() => refetch()}>
+          Neu laden
+        </Button>
       </div>
     );
   }
