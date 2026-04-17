@@ -260,14 +260,7 @@ function SidebarHeader() {
         </h2>
       </div>
 
-      <ShadcnSidebarTrigger
-        className={cn("text-muted-foreground", "mr-1.5", {
-          "opacity-0": !open,
-          "opacity-100": open || isMobile,
-          "pointer-events-auto": open || isMobile,
-          "pointer-events-none": !open && !isMobile,
-        })}
-      />
+      {/* Sidebar-internal trigger removed — single trigger lives in Header */}
     </ShadcnSidebarHeader>
   );
 }
