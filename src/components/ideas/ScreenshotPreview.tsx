@@ -12,7 +12,8 @@ type Props = {
 
 export function ScreenshotPreview({ src, alt = "Original-Screenshot" }: Props) {
   const [open, setOpen] = useState(false);
-  if (!src) return null;
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) return null;
 
   return (
     <>
@@ -25,13 +26,20 @@ export function ScreenshotPreview({ src, alt = "Original-Screenshot" }: Props) {
           src={src}
           alt={alt}
           loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setFailed(true)}
           className="h-24 w-full object-cover"
         />
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-3xl p-0 overflow-hidden">
           <DialogTitle className="sr-only">{alt}</DialogTitle>
-          <img src={src} alt={alt} className="w-full h-auto object-contain" />
+          <img
+            src={src}
+            alt={alt}
+            referrerPolicy="no-referrer"
+            className="w-full h-auto object-contain"
+          />
         </DialogContent>
       </Dialog>
     </>

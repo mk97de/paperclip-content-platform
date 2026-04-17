@@ -86,6 +86,8 @@ export function IdeasGrid({
             "roll_type",
             "image_url",
             "thumbnail_url",
+            "posted_at",
+            "views_count",
           ],
           limit: sourceIds.length,
         } as never)

@@ -28,6 +28,7 @@ export type HookIdea = {
   martin_feedback: string | null;
   scraped_hook_source_id: number | null;
   eval_score?: number | null;
+  date_created?: string | null;
 };
 
 export type ScrapedHook = {
@@ -39,7 +40,22 @@ export type ScrapedHook = {
   roll_type?: string | null;
   image_url?: string | null;
   thumbnail_url?: string | null;
+  posted_at?: string | null;
+  views_count?: number | null;
 };
+
+const DATE_FMT = new Intl.DateTimeFormat("de-DE", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "2-digit",
+});
+
+function formatViews(n: number | null | undefined): string | null {
+  if (typeof n !== "number") return null;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1)}K`;
+  return `${n}`;
+}
 
 export type IdeaCardVariant = "inbox" | "liked" | "commented" | "dismissed";
 
@@ -123,11 +139,16 @@ export function IdeaCard({ idea, source, variant, onFeedback }: Props) {
             <CategoryBadge category={idea.category} />
             <PatternBadge pattern={idea.hook_pattern} />
             <RollTypeBadge rollType={rollType} />
-            {typeof idea.eval_score === "number" && (
-              <span className="ml-auto text-xs font-mono text-muted-foreground">
-                {idea.eval_score.toFixed(1)}
-              </span>
-            )}
+            <div className="ml-auto flex items-center gap-2 text-[10px] text-muted-foreground font-mono">
+              {idea.date_created && (
+                <span title={`Idee erzeugt: ${new Date(idea.date_created).toLocaleString("de-DE")}`}>
+                  {DATE_FMT.format(new Date(idea.date_created))}
+                </span>
+              )}
+              {typeof idea.eval_score === "number" && (
+                <span>· {idea.eval_score.toFixed(1)}</span>
+              )}
+            </div>
           </div>
 
           <p className="text-base font-semibold leading-snug">
@@ -158,7 +179,7 @@ export function IdeaCard({ idea, source, variant, onFeedback }: Props) {
 
           {source && (
             <div className="pt-3 border-t border-border space-y-2">
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
                   Original
                 </span>
@@ -169,6 +190,18 @@ export function IdeaCard({ idea, source, variant, onFeedback }: Props) {
                   </span>
                 )}
               </div>
+              {(source.posted_at || formatViews(source.views_count)) && (
+                <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono">
+                  {source.posted_at && (
+                    <span title={new Date(source.posted_at).toLocaleString("de-DE")}>
+                      gepostet {DATE_FMT.format(new Date(source.posted_at))}
+                    </span>
+                  )}
+                  {formatViews(source.views_count) && (
+                    <span>· {formatViews(source.views_count)} Views</span>
+                  )}
+                </div>
+              )}
               <ScreenshotPreview src={screenshotSrc} />
               {source.hook_text && (
                 <p className="text-xs text-muted-foreground leading-snug line-clamp-3">
