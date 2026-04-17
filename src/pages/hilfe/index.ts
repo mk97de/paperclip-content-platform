@@ -1,0 +1,1 @@
+export { HilfePatterns } from "./patterns";
