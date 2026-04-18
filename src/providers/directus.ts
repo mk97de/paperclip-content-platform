@@ -58,20 +58,16 @@ export const directusClient = createDirectus(DIRECTUS_URL)
       storage: localAuthStorage,
     })
   )
-  .with(
-    rest({
-      credentials: "include",
-      onRequest: (options) => {
-        const token = readStoredToken();
-        if (!token) return options;
-        const headers = new Headers(options.headers ?? {});
-        if (!headers.has("Authorization")) {
-          headers.set("Authorization", `Bearer ${token}`);
-        }
-        return { ...options, headers };
-      },
-    })
-  );
+  .with(rest({ credentials: "include" }));
+
+// The SDK's AuthenticationStorage.get() is async, so the client's in-memory
+// token is empty during the first requests after page load — leading to 403s
+// even when a valid token sits in localStorage. Prime the in-memory state
+// synchronously at module load, before any request() call fires.
+const bootstrapToken = readStoredToken();
+if (bootstrapToken) {
+  directusClient.setToken(bootstrapToken);
+}
 
 // @tspvivek/refine-directus ships types against @refinedev/core v4 — our app runs on v5.
 // Runtime contract is identical; cast narrows to the v5 DataProvider shape we use.
