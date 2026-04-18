@@ -38,6 +38,18 @@ const localAuthStorage: AuthenticationStorage = {
   },
 };
 
+function readStoredToken(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as AuthenticationData;
+    return data?.access_token ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export const directusClient = createDirectus(DIRECTUS_URL)
   .with(
     authentication("json", {
@@ -46,7 +58,20 @@ export const directusClient = createDirectus(DIRECTUS_URL)
       storage: localAuthStorage,
     })
   )
-  .with(rest());
+  .with(
+    rest({
+      credentials: "include",
+      onRequest: (options) => {
+        const token = readStoredToken();
+        if (!token) return options;
+        const headers = new Headers(options.headers ?? {});
+        if (!headers.has("Authorization")) {
+          headers.set("Authorization", `Bearer ${token}`);
+        }
+        return { ...options, headers };
+      },
+    })
+  );
 
 // @tspvivek/refine-directus ships types against @refinedev/core v4 — our app runs on v5.
 // Runtime contract is identical; cast narrows to the v5 DataProvider shape we use.
