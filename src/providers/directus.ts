@@ -88,22 +88,19 @@ export const authProvider: AuthProvider = {
     }
   },
   logout: async () => {
-    // Clear client + storage FIRST. If we await directusClient.logout() before
-    // clearing, the SDK's async refresh-queue can re-prime localStorage with a
-    // fresh token between our clear call and the /login redirect — leaving the
-    // user effectively logged-in on next navigation.
-    directusClient.setToken(null);
-    if (typeof window !== "undefined") {
-      window.localStorage.removeItem(STORAGE_KEY);
-    }
+    // Must call server logout FIRST while refresh-token cookie is still valid —
+    // otherwise the server keeps reissuing access_tokens on every readMe() call
+    // (credentials:"include" + autoRefresh:true + HttpOnly refresh cookie).
     try {
       await directusClient.logout();
     } catch {
-      // Expected — token already gone, server call 401s. Ignore.
+      // Token may already be invalid — continue with local cleanup anyway.
     }
-    // Hard reload forces a clean module init (bootstrapToken sees no token),
-    // and kills any in-flight SDK refresh timers that could write again.
+    directusClient.setToken(null);
     if (typeof window !== "undefined") {
+      window.localStorage.removeItem(STORAGE_KEY);
+      // Hard reload kills any in-flight SDK refresh timers and forces a clean
+      // module init where bootstrapToken finds no token in storage.
       window.location.href = "/login";
     }
     return { success: true, redirectTo: "/login" };
