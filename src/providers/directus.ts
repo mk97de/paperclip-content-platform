@@ -69,11 +69,6 @@ if (bootstrapToken) {
   directusClient.setToken(bootstrapToken);
 }
 
-if (typeof window !== "undefined") {
-  (window as unknown as { __dc?: unknown }).__dc = directusClient;
-  (window as unknown as { __bootstrapped?: boolean }).__bootstrapped = !!bootstrapToken;
-}
-
 // @tspvivek/refine-directus ships types against @refinedev/core v4 — our app runs on v5.
 // Runtime contract is identical; cast narrows to the v5 DataProvider shape we use.
 export const dataProvider = buildDataProvider(directusClient) as unknown as DataProvider;
