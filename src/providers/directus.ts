@@ -1,4 +1,11 @@
-import { createDirectus, rest, authentication, readMe } from "@directus/sdk";
+import {
+  createDirectus,
+  rest,
+  authentication,
+  readMe,
+  type AuthenticationStorage,
+  type AuthenticationData,
+} from "@directus/sdk";
 import { dataProvider as buildDataProvider } from "@tspvivek/refine-directus";
 import type { AuthProvider, DataProvider } from "@refinedev/core";
 
@@ -8,8 +15,37 @@ if (!DIRECTUS_URL) {
   throw new Error("VITE_DIRECTUS_URL is not set. Check your .env file.");
 }
 
+const STORAGE_KEY = "directus-auth";
+
+const localAuthStorage: AuthenticationStorage = {
+  get: async () => {
+    if (typeof window === "undefined") return null;
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as AuthenticationData;
+    } catch {
+      return null;
+    }
+  },
+  set: async (value) => {
+    if (typeof window === "undefined") return;
+    if (value === null) {
+      window.localStorage.removeItem(STORAGE_KEY);
+    } else {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+    }
+  },
+};
+
 export const directusClient = createDirectus(DIRECTUS_URL)
-  .with(authentication("json", { credentials: "include", autoRefresh: true }))
+  .with(
+    authentication("json", {
+      credentials: "include",
+      autoRefresh: true,
+      storage: localAuthStorage,
+    })
+  )
   .with(rest());
 
 // @tspvivek/refine-directus ships types against @refinedev/core v4 — our app runs on v5.
@@ -42,6 +78,8 @@ export const authProvider: AuthProvider = {
     try {
       const token = await directusClient.getToken();
       if (!token) return { authenticated: false, redirectTo: "/login" };
+      // Verify token is still valid server-side; protects against stale localStorage
+      await directusClient.request(readMe({ fields: ["id"] }));
       return { authenticated: true };
     } catch {
       return { authenticated: false, redirectTo: "/login" };
