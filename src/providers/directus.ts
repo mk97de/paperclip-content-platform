@@ -88,17 +88,23 @@ export const authProvider: AuthProvider = {
     }
   },
   logout: async () => {
-    try {
-      await directusClient.logout();
-    } catch {
-      // ignore — token bereits abgelaufen
-    }
-    // SDK logout() does not reliably clear the in-memory token or storage on
-    // error, and the bootstrap-setToken path in this module re-primes stale
-    // tokens on reload. Force-clear both so check() returns unauthenticated.
+    // Clear client + storage FIRST. If we await directusClient.logout() before
+    // clearing, the SDK's async refresh-queue can re-prime localStorage with a
+    // fresh token between our clear call and the /login redirect — leaving the
+    // user effectively logged-in on next navigation.
     directusClient.setToken(null);
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(STORAGE_KEY);
+    }
+    try {
+      await directusClient.logout();
+    } catch {
+      // Expected — token already gone, server call 401s. Ignore.
+    }
+    // Hard reload forces a clean module init (bootstrapToken sees no token),
+    // and kills any in-flight SDK refresh timers that could write again.
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
     }
     return { success: true, redirectTo: "/login" };
   },
