@@ -25,5 +25,24 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            "vendor-react": ["react", "react-dom", "react-router"],
+            "vendor-refine": [
+              "@refinedev/core",
+              "@refinedev/react-router",
+              "@refinedev/kbar",
+              "@refinedev/devtools",
+              "@tanstack/react-query",
+            ],
+            "vendor-directus": ["@directus/sdk", "@tspvivek/refine-directus"],
+            "vendor-dnd": ["@dnd-kit/core", "@dnd-kit/sortable", "@dnd-kit/utilities"],
+            "vendor-ui": ["framer-motion", "lucide-react", "sonner"],
+          },
+        },
+      },
+    },
   };
 });

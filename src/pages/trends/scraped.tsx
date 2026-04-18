@@ -6,7 +6,7 @@ export const TrendsScraped = () => (
     <EmptyState
       icon={<Search className="h-7 w-7" />}
       title="Scraped Hooks"
-      description="Kommt in Session 43. Gallery aller gescrapten Original-Hooks aus dem Competitor-Scraper mit Filter nach Viral-Tier, Kategorie und Roll-Type."
+      description="In Arbeit. Gallery aller gescrapten Original-Hooks aus dem Competitor-Scraper mit Filter nach Viral-Tier, Kategorie und Roll-Type."
       actionLabel="Bald verfügbar"
       actionDisabled
     />

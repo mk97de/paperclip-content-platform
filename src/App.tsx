@@ -52,6 +52,23 @@ import { ThemeProvider } from "./components/refine-ui/theme/theme-provider";
 import { authProvider, dataProvider } from "./providers/directus";
 import "./App.css";
 
+const ROUTE_TITLES: Record<string, string> = {
+  "/ideas": "Inbox",
+  "/ideas/liked": "Gefällt mir",
+  "/ideas/commented": "Kommentiert",
+  "/ideas/dismissed": "Verworfen",
+  "/pipeline": "Pipeline",
+  "/calendar": "Kalender",
+  "/archive": "Archiv",
+  "/insights/performance": "Performance",
+  "/insights/report": "Weekly Report",
+  "/insights/learnings": "Agent Learnings",
+  "/trends/scraped": "Scraped Hooks",
+  "/trends/top": "Top Performer",
+  "/hilfe/patterns": "Hook-Patterns",
+  "/login": "Login",
+};
+
 function App() {
   return (
     <BrowserRouter>
@@ -261,7 +278,12 @@ function App() {
               <Toaster />
               <RefineKbar />
               <UnsavedChangesNotifier />
-              <DocumentTitleHandler />
+              <DocumentTitleHandler
+                handler={({ pathname }) => {
+                  const label = ROUTE_TITLES[pathname ?? ""] ?? "";
+                  return label ? `${label} · Paperclip Content` : "Paperclip Content";
+                }}
+              />
             </Refine>
             <DevtoolsPanel />
           </DevtoolsProvider>

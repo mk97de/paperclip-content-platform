@@ -6,7 +6,7 @@ export const TrendsTop = () => (
     <EmptyState
       icon={<TrendingUp className="h-7 w-7" />}
       title="Top Performer"
-      description="Kommt in Session 43. Ranking der Top-Hooks nach Save-Rate und Engagement — damit du siehst, welche Patterns gerade explodieren."
+      description="In Arbeit. Ranking der Top-Hooks nach Save-Rate und Engagement — damit du siehst, welche Patterns gerade explodieren."
       actionLabel="Bald verfügbar"
       actionDisabled
     />

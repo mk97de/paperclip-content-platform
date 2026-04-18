@@ -68,7 +68,7 @@ export function IdeasGrid({
         readItems("hook_ideas" as never, {
           filter,
           fields: IDEA_FIELDS,
-          sort: [onlyCommented ? "-date_updated" : "-date_created"],
+          sort: ["-date_created"],
           limit: 200,
         } as never)
       ) as Promise<HookIdea[]>;

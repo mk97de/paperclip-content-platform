@@ -93,6 +93,13 @@ export const authProvider: AuthProvider = {
     } catch {
       // ignore — token bereits abgelaufen
     }
+    // SDK logout() does not reliably clear the in-memory token or storage on
+    // error, and the bootstrap-setToken path in this module re-primes stale
+    // tokens on reload. Force-clear both so check() returns unauthenticated.
+    directusClient.setToken(null);
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(STORAGE_KEY);
+    }
     return { success: true, redirectTo: "/login" };
   },
   check: async () => {

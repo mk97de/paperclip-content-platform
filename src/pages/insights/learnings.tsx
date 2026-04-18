@@ -6,7 +6,7 @@ export const InsightsLearnings = () => (
     <EmptyState
       icon={<Brain className="h-7 w-7" />}
       title="Agent Learnings"
-      description="Kommt in Session 42. Feedback-Loop der Agenten: Was lernen HookSmith und CaptionSmith aus deinen Likes, Dismisses und Kommentaren?"
+      description="In Arbeit. Feedback-Loop der Agenten: Was lernen HookSmith und CaptionSmith aus deinen Likes, Dismisses und Kommentaren?"
       actionLabel="Bald verfügbar"
       actionDisabled
     />

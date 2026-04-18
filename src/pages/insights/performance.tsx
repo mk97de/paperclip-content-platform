@@ -6,7 +6,7 @@ export const InsightsPerformance = () => (
     <EmptyState
       icon={<BarChart3 className="h-7 w-7" />}
       title="Performance-Analytics"
-      description="Kommt in Session 41. Zeigt Hook-Pattern-Performance, Engagement-Rate pro Kategorie, Posting-Zeit-Effekt und Viral-Tier-Korrelation."
+      description="In Arbeit. Zeigt Hook-Pattern-Performance, Engagement-Rate pro Kategorie, Posting-Zeit-Effekt und Viral-Tier-Korrelation — sobald genug Posts veröffentlicht sind."
       actionLabel="Bald verfügbar"
       actionDisabled
     />

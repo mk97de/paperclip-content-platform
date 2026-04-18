@@ -148,11 +148,13 @@ export function IdeaCard({ idea, source, variant, onFeedback }: Props) {
     >
       <Card className="h-full flex flex-col shadow-sm hover:shadow-md dark:shadow-black/40 transition-shadow duration-200 border-border/60">
         <CardContent className="flex-1 pt-6 space-y-4">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <CategoryBadge category={idea.category} />
-            <PatternBadge pattern={idea.hook_pattern} />
-            <RollTypeBadge rollType={rollType} />
-            <div className="ml-auto flex items-center gap-2 text-[10px] text-muted-foreground font-mono">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+              <CategoryBadge category={idea.category} />
+              <PatternBadge pattern={idea.hook_pattern} />
+              <RollTypeBadge rollType={rollType} />
+            </div>
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono whitespace-nowrap shrink-0 pt-0.5">
               {idea.date_created && (
                 <span title={`Idee erzeugt: ${new Date(idea.date_created).toLocaleString("de-DE")}`}>
                   {DATE_FMT.format(new Date(idea.date_created))}
