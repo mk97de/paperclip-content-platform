@@ -104,6 +104,7 @@ export const InsightsPerformance = () => {
     ] as never,
     sorters: [{ field: "captured_at", order: "desc" }],
     pagination: { pageSize: 500 },
+    meta: { noStatus: true },
   });
 
   const { currentReels, previousReels } = useMemo(() => {
