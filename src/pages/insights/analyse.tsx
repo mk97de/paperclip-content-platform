@@ -10,15 +10,17 @@ import {
   periodToDateRange,
   type Period,
 } from "@/components/insights/PeriodToggle";
-import { HookLengthScatter } from "@/components/insights/HookLengthScatter";
+import { CategoryRankingCharts } from "@/components/insights/CategoryRankingCharts";
 import {
   ReelsDataTable,
   type TableReel,
 } from "@/components/insights/ReelsDataTable";
+import {
+  ReelDetailDialog,
+  type DetailReel,
+} from "@/components/insights/ReelDetailDialog";
 
-type AnalyseRow = TableReel & {
-  ig_media_id: string | null;
-  ig_posted_at: string | null;
+type AnalyseRow = DetailReel & TableReel & {
   captured_at: string | null;
 };
 
@@ -38,6 +40,7 @@ export const InsightsAnalyse = () => {
   const [period, setPeriod] = useState<Period>("90d");
   const [categories, setCategories] = useState<string[]>([]);
   const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<AnalyseRow | null>(null);
 
   const range = useMemo(() => periodToDateRange(period), [period]);
 
@@ -79,7 +82,7 @@ export const InsightsAnalyse = () => {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Analyse</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {filtered.length} Reels · forensische Deep-Dive-Ansicht
+            {filtered.length} Reels · Klick auf Zeile öffnet Detail-Ansicht
           </p>
         </div>
         <PeriodToggle value={period} onChange={setPeriod} />
@@ -106,10 +109,18 @@ export const InsightsAnalyse = () => {
         />
       ) : (
         <>
-          <HookLengthScatter reels={filtered} />
-          <ReelsDataTable reels={filtered} />
+          <CategoryRankingCharts reels={filtered} />
+          <ReelsDataTable reels={filtered} onRowClick={(r) => setSelected(r as AnalyseRow)} />
         </>
       )}
+
+      <ReelDetailDialog
+        open={!!selected}
+        onOpenChange={(open) => {
+          if (!open) setSelected(null);
+        }}
+        reel={selected}
+      />
     </div>
   );
 };

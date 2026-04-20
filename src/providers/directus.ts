@@ -64,9 +64,19 @@ export const directusClient = createDirectus(DIRECTUS_URL)
 // token is empty during the first requests after page load — leading to 403s
 // even when a valid token sits in localStorage. Prime the in-memory state
 // synchronously at module load, before any request() call fires.
+//
+// Additionally, the stored access_token may already be expired. Fire a refresh
+// immediately (not awaited) so the SDK has a fresh token ready before the first
+// useList on pages like /insights/performance. If the refresh fails (expired
+// refresh token), clear storage so <Authenticated> redirects to /login cleanly.
 const bootstrapToken = readStoredToken();
 if (bootstrapToken) {
   directusClient.setToken(bootstrapToken);
+  void directusClient.refresh().catch(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(STORAGE_KEY);
+    }
+  });
 }
 
 // @tspvivek/refine-directus ships types against @refinedev/core v4 — our app runs on v5.
@@ -136,7 +146,19 @@ export const authProvider: AuthProvider = {
     }
   },
   onError: async (error) => {
-    if (error?.statusCode === 401 || error?.statusCode === 403) {
+    const status = error?.statusCode;
+    // 401 = expired access_token. Try one refresh before giving up —
+    // this catches the race between module load and first useList on pages
+    // that fire queries immediately (e.g. /insights/performance).
+    if (status === 401) {
+      try {
+        await directusClient.refresh();
+        return {};
+      } catch {
+        return { logout: true, redirectTo: "/login" };
+      }
+    }
+    if (status === 403) {
       return { logout: true, redirectTo: "/login" };
     }
     return {};

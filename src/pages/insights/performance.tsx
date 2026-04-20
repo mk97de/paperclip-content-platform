@@ -6,11 +6,12 @@ import {
   Bookmark,
   Clock,
   Loader2,
-  Sparkles,
+  UserPlus,
 } from "lucide-react";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { CategoryFilter } from "@/components/shared/CategoryFilter";
+import { Badge } from "@/components/ui/badge";
 import {
   KpiStatCard,
   type Delta,
@@ -31,6 +32,7 @@ type PerformanceRow = TopReel & {
   save_rate: number | null;
   ig_reels_avg_watch_time_ms: number | null;
   viral_score: number | null;
+  follower_delta_24h: number | null;
 };
 
 type TierCount = { S: number; A: number; B: number; C: number; D: number };
@@ -53,6 +55,14 @@ function mean(values: Array<number | null | undefined>): number | null {
   return ns.reduce((a, b) => a + b, 0) / ns.length;
 }
 
+function sumDelta(values: Array<number | null | undefined>): number {
+  return values.reduce<number>((acc, v) => acc + (typeof v === "number" && !Number.isNaN(v) ? v : 0), 0);
+}
+
+function countKnown(values: Array<number | null | undefined>): number {
+  return values.reduce<number>((acc, v) => acc + (typeof v === "number" ? 1 : 0), 0);
+}
+
 function tierCount(rows: PerformanceRow[]): TierCount {
   const t: TierCount = { S: 0, A: 0, B: 0, C: 0, D: 0 };
   for (const r of rows) {
@@ -60,13 +70,6 @@ function tierCount(rows: PerformanceRow[]): TierCount {
     if (tier && tier in t) t[tier]++;
   }
   return t;
-}
-
-function deltaPct(cur: number | null, prev: number | null): Delta | null {
-  if (cur == null || prev == null || prev === 0) return null;
-  const pct = ((cur - prev) / prev) * 100;
-  const direction = Math.abs(pct) < 0.5 ? "flat" : pct > 0 ? "up" : "down";
-  return { value: `${pct > 0 ? "+" : ""}${pct.toFixed(1)}%`, direction };
 }
 
 function deltaAbs(
@@ -80,6 +83,15 @@ function deltaAbs(
   const direction = Math.abs(diff) < 0.05 ? "flat" : diff > 0 ? "up" : "down";
   return {
     value: `${diff > 0 ? "+" : ""}${diff.toFixed(decimals)}${suffix}`,
+    direction,
+  };
+}
+
+function deltaInt(cur: number, prev: number, suffix = ""): Delta | null {
+  const diff = cur - prev;
+  const direction = diff === 0 ? "flat" : diff > 0 ? "up" : "down";
+  return {
+    value: `${diff > 0 ? "+" : ""}${diff}${suffix}`,
     direction,
   };
 }
@@ -132,6 +144,11 @@ export const InsightsPerformance = () => {
     const prevSave = mean(previousReels.map((r) => r.save_rate));
     const curWatchMs = mean(currentReels.map((r) => r.ig_reels_avg_watch_time_ms));
     const prevWatchMs = mean(previousReels.map((r) => r.ig_reels_avg_watch_time_ms));
+
+    const curFollowerSum = sumDelta(currentReels.map((r) => r.follower_delta_24h));
+    const prevFollowerSum = sumDelta(previousReels.map((r) => r.follower_delta_24h));
+    const curFollowerKnown = countKnown(currentReels.map((r) => r.follower_delta_24h));
+
     const curTiers = tierCount(currentReels);
 
     return {
@@ -159,6 +176,13 @@ export const InsightsPerformance = () => {
           "s",
         ),
       },
+      follower: {
+        value: curFollowerKnown === 0 ? "—" : `+${curFollowerSum}`,
+        delta: deltaInt(curFollowerSum, prevFollowerSum),
+        hint: curFollowerKnown === 0
+          ? "noch nicht eingetragen"
+          : `${curFollowerKnown}/${currentReels.length} Reels erfasst`,
+      },
       tiers: curTiers,
       totalReels: currentReels.length,
     };
@@ -180,17 +204,31 @@ export const InsightsPerformance = () => {
     );
   }
 
-  const tiersValue =
-    `S:${kpis.tiers.S} A:${kpis.tiers.A} B:${kpis.tiers.B} C:${kpis.tiers.C}`;
-
   return (
     <div className="p-4 md:p-8 max-w-[1600px] mx-auto space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">Performance</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground">
             {kpis.totalReels} Reels im Zeitraum
           </p>
+          {kpis.totalReels > 0 && (
+            <div className="flex flex-wrap gap-1 pt-1">
+              {(["S", "A", "B", "C", "D"] as const).map((tier) => {
+                const count = kpis.tiers[tier];
+                if (count === 0) return null;
+                return (
+                  <Badge
+                    key={tier}
+                    variant="outline"
+                    className="text-[10px] font-bold px-1.5 py-0"
+                  >
+                    {tier}:{count}
+                  </Badge>
+                );
+              })}
+            </div>
+          )}
         </div>
         <PeriodToggle value={period} onChange={setPeriod} />
       </div>
@@ -218,10 +256,11 @@ export const InsightsPerformance = () => {
           icon={<Clock className="h-4 w-4" />}
         />
         <KpiStatCard
-          label="Viral-Mix"
-          value={tiersValue}
-          hint={`D:${kpis.tiers.D}`}
-          icon={<Sparkles className="h-4 w-4" />}
+          label="Follower gewonnen"
+          value={kpis.follower.value}
+          delta={kpis.follower.delta}
+          hint={kpis.follower.hint}
+          icon={<UserPlus className="h-4 w-4" />}
         />
       </div>
 
