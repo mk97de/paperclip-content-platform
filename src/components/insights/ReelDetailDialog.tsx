@@ -88,10 +88,12 @@ function fmtWatch(v: number | null): string {
 
 function fmtDate(d: string | null): string {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("de-DE", {
+  return new Date(d).toLocaleString("de-DE", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 

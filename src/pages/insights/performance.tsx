@@ -33,7 +33,12 @@ type PerformanceRow = TopReel & {
   ig_reels_avg_watch_time_ms: number | null;
   viral_score: number | null;
   follower_delta_24h: number | null;
+  total_views: number | null;
 };
+
+function coalesceTotalViews(rows: PerformanceRow[]): PerformanceRow[] {
+  return rows.map((r) => ({ ...r, views: r.total_views ?? r.views }));
+}
 
 type TierCount = { S: number; A: number; B: number; C: number; D: number };
 
@@ -121,7 +126,7 @@ export const InsightsPerformance = () => {
 
   const { currentReels, previousReels } = useMemo(() => {
     const raw = (result?.data ?? []) as PerformanceRow[];
-    const deduped = dedupeByMedia(raw);
+    const deduped = coalesceTotalViews(dedupeByMedia(raw));
     const filtered = categories.length === 0
       ? deduped
       : deduped.filter((r) => r.category && categories.includes(r.category));

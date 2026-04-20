@@ -83,7 +83,12 @@ function fmtWatch(v: number | null): string {
 
 function fmtDate(d: string | null): string {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+  return new Date(d).toLocaleString("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export function ReelsDataTable({
@@ -189,6 +194,11 @@ export function ReelsDataTable({
                     <p className="line-clamp-2 leading-snug">
                       {r.ig_caption_preview ?? "(kein Caption)"}
                     </p>
+                    {r.ig_shortcode && (
+                      <span className="mt-0.5 inline-block text-[9px] font-mono text-muted-foreground/70">
+                        {r.ig_shortcode}
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">
                     <CategoryBadge category={r.category} className="text-[9px] py-0 px-1.5" />

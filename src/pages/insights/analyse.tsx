@@ -22,7 +22,12 @@ import {
 
 type AnalyseRow = DetailReel & TableReel & {
   captured_at: string | null;
+  total_views: number | null;
 };
+
+function coalesceTotalViews(rows: AnalyseRow[]): AnalyseRow[] {
+  return rows.map((r) => ({ ...r, views: r.total_views ?? r.views }));
+}
 
 function dedupeByMedia(rows: AnalyseRow[]): AnalyseRow[] {
   const byMedia = new Map<string, AnalyseRow>();
@@ -59,7 +64,7 @@ export const InsightsAnalyse = () => {
 
   const filtered = useMemo(() => {
     const raw = (result?.data ?? []) as AnalyseRow[];
-    const deduped = dedupeByMedia(raw);
+    const deduped = coalesceTotalViews(dedupeByMedia(raw));
     const lower = search.trim().toLowerCase();
     return deduped.filter((r) => {
       if (categories.length > 0 && !(r.category && categories.includes(r.category))) return false;
