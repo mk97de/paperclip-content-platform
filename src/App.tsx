@@ -19,6 +19,7 @@ import {
   Calendar as CalendarIcon,
   Archive,
   BarChart3,
+  Microscope,
   LineChart,
   Brain,
   Search,
@@ -38,6 +39,7 @@ import { CalendarList } from "./pages/calendar";
 import { ArchiveList } from "./pages/archive";
 import {
   InsightsPerformance,
+  InsightsAnalyse,
   InsightsReport,
   InsightsLearnings,
 } from "./pages/insights";
@@ -61,6 +63,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/calendar": "Kalender",
   "/archive": "Archiv",
   "/insights/performance": "Performance",
+  "/insights/analyse": "Analyse",
   "/insights/report": "Weekly Report",
   "/insights/learnings": "Agent Learnings",
   "/trends/scraped": "Scraped Hooks",
@@ -169,6 +172,15 @@ function App() {
                   },
                 },
                 {
+                  name: "insights-analyse",
+                  list: "/insights/analyse",
+                  meta: {
+                    label: "Analyse",
+                    icon: <Microscope className="h-4 w-4" />,
+                    parent: "insights-group",
+                  },
+                },
+                {
                   name: "insights-report",
                   list: "/insights/report",
                   meta: {
@@ -253,6 +265,7 @@ function App() {
                     path="/insights/performance"
                     element={<InsightsPerformance />}
                   />
+                  <Route path="/insights/analyse" element={<InsightsAnalyse />} />
                   <Route path="/insights/report" element={<InsightsReport />} />
                   <Route
                     path="/insights/learnings"
