@@ -83,6 +83,11 @@ if (bootstrapToken) {
 // Runtime contract is identical; cast narrows to the v5 DataProvider shape we use.
 export const dataProvider = buildDataProvider(directusClient) as unknown as DataProvider;
 
+export function getAssetUrl(uuid: string | null | undefined): string | null {
+  if (!uuid) return null;
+  return `${DIRECTUS_URL}/assets/${uuid}`;
+}
+
 export const authProvider: AuthProvider = {
   login: async ({ email, password }) => {
     try {

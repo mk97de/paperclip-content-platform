@@ -7,12 +7,28 @@ import { Loader2, Inbox } from "lucide-react";
 import { directusClient } from "@/providers/directus";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CATEGORY_LABEL } from "@/lib/categories";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { IdeaCard, type HookIdea, type ScrapedHook, type IdeaCardVariant } from "./IdeaCard";
 import { FeedbackDialog } from "./FeedbackDialog";
 
 type StatusFilter = "new" | "liked" | "dismissed" | null;
+
+type SortKey = "newest" | "oldest" | "score_high" | "score_low";
+
+const SORT_OPTIONS: { value: SortKey; label: string; sort: string[] }[] = [
+  { value: "newest", label: "Neueste zuerst", sort: ["-date_created"] },
+  { value: "oldest", label: "\u00c4lteste zuerst", sort: ["date_created"] },
+  { value: "score_high", label: "Beste Bewertung", sort: ["-eval_score", "-date_created"] },
+  { value: "score_low", label: "Schlechteste Bewertung", sort: ["eval_score", "-date_created"] },
+];
 
 type Props = {
   title: string;
@@ -50,8 +66,11 @@ export function IdeasGrid({
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackIdea, setFeedbackIdea] = useState<HookIdea | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>("newest");
 
-  const filterKey = `${status ?? "any"}-${onlyCommented ? "commented" : "all"}`;
+  const sortConfig =
+    SORT_OPTIONS.find((o) => o.value === sortKey) ?? SORT_OPTIONS[0];
+  const filterKey = `${status ?? "any"}-${onlyCommented ? "commented" : "all"}-${sortKey}`;
 
   const {
     data: ideasData,
@@ -68,7 +87,7 @@ export function IdeasGrid({
         readItems("hook_ideas" as never, {
           filter,
           fields: IDEA_FIELDS,
-          sort: ["-date_created"],
+          sort: sortConfig.sort,
           limit: 200,
         } as never)
       ) as Promise<HookIdea[]>;
@@ -106,6 +125,7 @@ export function IdeasGrid({
             "roll_type",
             "image_url",
             "thumbnail_url",
+            "thumbnail_file",
             "posted_at",
             "views_count",
           ],
@@ -161,13 +181,27 @@ export function IdeasGrid({
 
   return (
     <div className="p-4 md:p-8 max-w-[1600px] mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {ideas.length}
-          {categoryFilter ? ` von ${allIdeas.length}` : ""}{" "}
-          {subtitle ?? "Ideen"}
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {ideas.length}
+            {categoryFilter ? ` von ${allIdeas.length}` : ""}{" "}
+            {subtitle ?? "Ideen"}
+          </p>
+        </div>
+        <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
+          <SelectTrigger className="h-9 w-[200px] text-xs">
+            <SelectValue placeholder="Sortierung" />
+          </SelectTrigger>
+          <SelectContent>
+            {SORT_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {availableCategories.length > 1 && (

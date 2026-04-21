@@ -13,6 +13,7 @@ import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { getAssetUrl } from "@/providers/directus";
 import { CategoryBadge } from "./CategoryBadge";
 import { PatternBadge } from "./PatternBadge";
 import { RollTypeBadge } from "./RollTypeBadge";
@@ -41,6 +42,7 @@ export type ScrapedHook = {
   roll_type?: string | null;
   image_url?: string | null;
   thumbnail_url?: string | null;
+  thumbnail_file?: string | null;
   posted_at?: string | null;
   views_count?: number | null;
 };
@@ -136,7 +138,11 @@ export function IdeaCard({ idea, source, variant, onFeedback }: Props) {
   };
 
   const rollType = source?.roll_type ?? null;
-  const screenshotSrc = source?.image_url ?? source?.thumbnail_url ?? null;
+  const screenshotSrc =
+    getAssetUrl(source?.thumbnail_file) ??
+    source?.image_url ??
+    source?.thumbnail_url ??
+    null;
 
   return (
     <motion.div
