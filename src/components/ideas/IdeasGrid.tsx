@@ -119,6 +119,8 @@ export function IdeasGrid({
           fields: [
             "id",
             "hook_text",
+            "visual_hook_text",
+            "full_caption",
             "post_url",
             "account_username",
             "viral_tier",

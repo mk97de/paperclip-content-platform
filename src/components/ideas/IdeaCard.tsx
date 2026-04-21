@@ -1,5 +1,6 @@
 import { useUpdate, useCreate } from "@refinedev/core";
 import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import {
   ThumbsUp,
   ThumbsDown,
@@ -7,12 +8,20 @@ import {
   ExternalLink,
   RotateCcw,
   ArrowRight,
+  ChevronDown,
+  ChevronUp,
+  Quote,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { getAssetUrl } from "@/providers/directus";
 import { CategoryBadge } from "./CategoryBadge";
 import { PatternBadge } from "./PatternBadge";
@@ -36,6 +45,8 @@ export type HookIdea = {
 export type ScrapedHook = {
   id: number;
   hook_text: string | null;
+  visual_hook_text?: string | null;
+  full_caption?: string | null;
   post_url: string | null;
   account_username: string | null;
   viral_tier: string | null;
@@ -70,6 +81,7 @@ type Props = {
 };
 
 export function IdeaCard({ idea, source, variant, onFeedback }: Props) {
+  const [captionOpen, setCaptionOpen] = useState(false);
   const queryClient = useQueryClient();
   const {
     mutate: updateIdea,
@@ -224,11 +236,45 @@ export function IdeaCard({ idea, source, variant, onFeedback }: Props) {
                 </div>
               )}
               <ScreenshotPreview src={screenshotSrc} />
+              {source.visual_hook_text && (
+                <div className="rounded-md border border-amber-200/70 bg-amber-50/70 dark:bg-amber-900/20 dark:border-amber-800/40 px-3 py-2 space-y-1">
+                  <div className="flex items-center gap-1 text-[10px] uppercase tracking-wider font-medium text-amber-700 dark:text-amber-300">
+                    <Quote className="h-3 w-3" />
+                    Original Hook (Video)
+                  </div>
+                  <p className="text-xs font-medium leading-snug text-foreground">
+                    {source.visual_hook_text}
+                  </p>
+                </div>
+              )}
               {source.hook_text && (
                 <p className="text-xs text-muted-foreground leading-snug line-clamp-3">
                   {source.hook_text}
                 </p>
               )}
+              {source.full_caption &&
+                source.full_caption.trim() !== (source.hook_text ?? "").trim() && (
+                  <Collapsible open={captionOpen} onOpenChange={setCaptionOpen}>
+                    <CollapsibleTrigger className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors">
+                      {captionOpen ? (
+                        <>
+                          <ChevronUp className="h-3 w-3" />
+                          Caption einklappen
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="h-3 w-3" />
+                          Komplette Caption lesen
+                        </>
+                      )}
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <p className="mt-2 text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                        {source.full_caption}
+                      </p>
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
               {source.post_url && (
                 <a
                   href={source.post_url}

@@ -33,7 +33,12 @@ function formatNumber(n: number | null | undefined): string {
   return String(n);
 }
 
-export function TopReelCard({ reel }: { reel: TopReel }) {
+type TopReelCardProps = {
+  reel: TopReel;
+  onClick?: (reel: TopReel) => void;
+};
+
+export function TopReelCard({ reel, onClick }: TopReelCardProps) {
   const tierClass = reel.viral_tier
     ? TIER_COLOR[reel.viral_tier] ?? "bg-muted text-foreground"
     : "bg-muted text-foreground";
@@ -100,6 +105,18 @@ export function TopReelCard({ reel }: { reel: TopReel }) {
 
   const baseCls =
     "overflow-hidden border-border/60 transition-colors hover:border-border";
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={() => onClick(reel)}
+        className="block text-left w-full cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl"
+      >
+        <Card className={cn(baseCls, "hover:shadow-md")}>{CardInner}</Card>
+      </button>
+    );
+  }
 
   if (reel.ig_permalink) {
     return (

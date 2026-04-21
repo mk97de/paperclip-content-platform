@@ -25,14 +25,14 @@ import {
   TopReelCard,
   type TopReel,
 } from "@/components/insights/TopReelCard";
+import {
+  ReelDetailDialog,
+  type DetailReel,
+} from "@/components/insights/ReelDetailDialog";
 
-type PerformanceRow = TopReel & {
+type PerformanceRow = TopReel & DetailReel & {
   captured_at: string | null;
-  reach: number | null;
-  save_rate: number | null;
-  ig_reels_avg_watch_time_ms: number | null;
   viral_score: number | null;
-  follower_delta_24h: number | null;
   total_views: number | null;
 };
 
@@ -104,6 +104,7 @@ function deltaInt(cur: number, prev: number, suffix = ""): Delta | null {
 export const InsightsPerformance = () => {
   const [period, setPeriod] = useState<Period>("30d");
   const [categories, setCategories] = useState<string[]>([]);
+  const [selected, setSelected] = useState<PerformanceRow | null>(null);
 
   const range = useMemo(() => periodToDateRange(period), [period]);
 
@@ -282,10 +283,22 @@ export const InsightsPerformance = () => {
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {topReels.map((reel) => (
-            <TopReelCard key={reel.id} reel={reel} />
+            <TopReelCard
+              key={reel.id}
+              reel={reel}
+              onClick={() => setSelected(reel)}
+            />
           ))}
         </div>
       )}
+
+      <ReelDetailDialog
+        open={!!selected}
+        onOpenChange={(open) => {
+          if (!open) setSelected(null);
+        }}
+        reel={selected}
+      />
     </div>
   );
 };
