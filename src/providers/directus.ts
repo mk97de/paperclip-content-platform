@@ -65,17 +65,20 @@ export const directusClient = createDirectus(DIRECTUS_URL)
 // even when a valid token sits in localStorage. Prime the in-memory state
 // synchronously at module load, before any request() call fires.
 //
-// Additionally, the stored access_token may already be expired. Fire a refresh
-// immediately (not awaited) so the SDK has a fresh token ready before the first
-// useList on pages like /insights/performance. If the refresh fails (expired
-// refresh token), clear storage so <Authenticated> redirects to /login cleanly.
+// Additionally, the stored access_token may already be expired after idle
+// reloads. Fire a refresh immediately and expose the promise so authProvider.check()
+// can await it — that gates <Authenticated> rendering until a fresh token is in
+// place, preventing the 401 race on pages that fire useList on mount
+// (e.g. /insights/performance, /insights/analyse).
+let bootstrapRefreshPromise: Promise<unknown> | null = null;
 const bootstrapToken = readStoredToken();
 if (bootstrapToken) {
   directusClient.setToken(bootstrapToken);
-  void directusClient.refresh().catch(() => {
+  bootstrapRefreshPromise = directusClient.refresh().catch(() => {
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(STORAGE_KEY);
     }
+    return null;
   });
 }
 
@@ -122,6 +125,13 @@ export const authProvider: AuthProvider = {
   },
   check: async () => {
     try {
+      // Block until the bootstrap refresh (fired at module load) settles.
+      // This is what closes the token-race: <Authenticated> only renders — and
+      // child routes only fire their queries — after the SDK has a fresh token.
+      if (bootstrapRefreshPromise) {
+        await bootstrapRefreshPromise;
+        bootstrapRefreshPromise = null;
+      }
       const token = await directusClient.getToken();
       if (!token) return { authenticated: false, redirectTo: "/login" };
       // Verify token is still valid server-side; protects against stale localStorage

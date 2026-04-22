@@ -49,15 +49,18 @@ type Column = {
   className?: string;
 };
 
+// Mobile keeps the 5 core metrics in view — horizontal-scroll (overflow-x-auto
+// on the wrapper) carries the rest. Only `ig_posted_at` stays hidden on mobile
+// since the date is redundant with the sort-by-date default.
 const COLUMNS: Column[] = [
   { key: "ig_posted_at", label: "Datum", format: (v) => fmtDate(v as string | null), className: "hidden md:table-cell" },
   { key: "views", label: "Views", format: (v) => fmtNum(v as number | null) },
   { key: "follower_delta_24h", label: "Follower +", format: (v) => fmtFollower(v as number | null) },
-  { key: "reach", label: "Reach", format: (v) => fmtNum(v as number | null), className: "hidden md:table-cell" },
+  { key: "reach", label: "Reach", format: (v) => fmtNum(v as number | null) },
   { key: "engagement_rate", label: "Eng %", format: (v) => fmtPct(v as number | null, 100) },
-  { key: "save_rate", label: "Save %", format: (v) => fmtPct(v as number | null, 100), className: "hidden md:table-cell" },
-  { key: "reels_skip_rate", label: "Skip %", format: (v) => fmtPct(v as number | null, 1), className: "hidden lg:table-cell" },
-  { key: "ig_reels_avg_watch_time_ms", label: "Watch", format: (v) => fmtWatch(v as number | null), className: "hidden lg:table-cell" },
+  { key: "save_rate", label: "Save %", format: (v) => fmtPct(v as number | null, 100) },
+  { key: "reels_skip_rate", label: "Skip %", format: (v) => fmtPct(v as number | null, 1), className: "hidden md:table-cell" },
+  { key: "ig_reels_avg_watch_time_ms", label: "Watch", format: (v) => fmtWatch(v as number | null), className: "hidden md:table-cell" },
 ];
 
 function fmtNum(v: number | null): string {
