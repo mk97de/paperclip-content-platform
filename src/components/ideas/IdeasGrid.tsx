@@ -24,10 +24,10 @@ type StatusFilter = "new" | "liked" | "dismissed" | null;
 type SortKey = "newest" | "oldest" | "score_high" | "score_low";
 
 const SORT_OPTIONS: { value: SortKey; label: string; sort: string[] }[] = [
-  { value: "newest", label: "Neueste zuerst", sort: ["-scraped_hook_source_id.posted_at"] },
-  { value: "oldest", label: "\u00c4lteste zuerst", sort: ["scraped_hook_source_id.posted_at"] },
-  { value: "score_high", label: "Beste Bewertung", sort: ["-eval_score", "-scraped_hook_source_id.posted_at"] },
-  { value: "score_low", label: "Schlechteste Bewertung", sort: ["eval_score", "-scraped_hook_source_id.posted_at"] },
+  { value: "newest", label: "Neueste zuerst", sort: ["-date_created"] },
+  { value: "oldest", label: "\u00c4lteste zuerst", sort: ["date_created"] },
+  { value: "score_high", label: "Beste Bewertung", sort: ["-eval_score", "-date_created"] },
+  { value: "score_low", label: "Schlechteste Bewertung", sort: ["eval_score", "-date_created"] },
 ];
 
 type Props = {
