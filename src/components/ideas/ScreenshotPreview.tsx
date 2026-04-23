@@ -32,7 +32,7 @@ export function ScreenshotPreview({ src, alt = "Original-Screenshot" }: Props) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="block w-full overflow-hidden rounded-md border border-border bg-muted transition hover:opacity-90"
+        className="block w-full overflow-hidden rounded-md border border-border bg-black transition hover:opacity-90"
       >
         <img
           src={src}
@@ -40,7 +40,7 @@ export function ScreenshotPreview({ src, alt = "Original-Screenshot" }: Props) {
           loading="lazy"
           referrerPolicy="no-referrer"
           onError={() => setFailed(true)}
-          className="aspect-[9/16] w-full object-cover"
+          className="aspect-[9/16] w-full object-contain"
         />
       </button>
       <Dialog open={open} onOpenChange={setOpen}>

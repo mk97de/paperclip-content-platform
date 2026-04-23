@@ -192,10 +192,17 @@ export function IdeasGrid({
     return Number.isFinite(t) ? t : 0;
   };
 
+  // "Vollstaendig" = mindestens ein Visual-Asset (thumbnail_file oder image_url) UND
+  // mindestens ein Hook-Signal (visual_hook_text, spoken_hook, hook_text). Reels ohne
+  // jegliches Visual ODER ohne jegliche Hook werden ausgefiltert — thumbnail_file alleine
+  // ist zu streng, weil die Backfill-Pipeline hinterherhinkt.
   const isComplete = (src: ScrapedHook | undefined): boolean => {
     if (!src) return false;
-    if (!src.thumbnail_file) return false;
-    return Boolean(src.visual_hook_text || src.spoken_hook);
+    const hasVisual = Boolean(src.thumbnail_file || src.image_url || src.thumbnail_url);
+    const hasHookSignal = Boolean(
+      src.visual_hook_text || src.spoken_hook || src.hook_text
+    );
+    return hasVisual && hasHookSignal;
   };
 
   // Pre-creator-filter ideas (category + format + time + incomplete applied).
