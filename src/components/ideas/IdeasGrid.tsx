@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { readItems } from "@directus/sdk";
 import { AnimatePresence } from "framer-motion";
-import { Loader2, Inbox } from "lucide-react";
+import { Loader2, Inbox, Users, ChevronDown } from "lucide-react";
 
 import { directusClient } from "@/providers/directus";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { CATEGORY_LABEL } from "@/lib/categories";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { IdeaCard, type HookIdea, type ScrapedHook, type IdeaCardVariant } from "./IdeaCard";
@@ -23,12 +30,28 @@ type StatusFilter = "new" | "liked" | "dismissed" | null;
 
 type SortKey = "newest" | "oldest" | "score_high" | "score_low";
 
-const SORT_OPTIONS: { value: SortKey; label: string; sort: string[] }[] = [
-  { value: "newest", label: "Neueste zuerst", sort: ["-date_created"] },
-  { value: "oldest", label: "\u00c4lteste zuerst", sort: ["date_created"] },
-  { value: "score_high", label: "Beste Bewertung", sort: ["-eval_score", "-date_created"] },
-  { value: "score_low", label: "Schlechteste Bewertung", sort: ["eval_score", "-date_created"] },
+type FormatFilter = "all" | "a_roll" | "b_roll";
+type TimeRangeFilter = "all" | "7" | "14" | "28";
+
+const FORMAT_OPTIONS: { value: FormatFilter; label: string }[] = [
+  { value: "all", label: "Alle" },
+  { value: "a_roll", label: "A-Roll" },
+  { value: "b_roll", label: "B-Roll" },
 ];
+
+const TIME_RANGE_OPTIONS: { value: TimeRangeFilter; label: string; days: number | null }[] = [
+  { value: "all", label: "Alle Zeit", days: null },
+  { value: "7", label: "7T", days: 7 },
+  { value: "14", label: "14T", days: 14 },
+  { value: "28", label: "28T", days: 28 },
+];
+
+const SORT_LABELS: Record<SortKey, string> = {
+  newest: "Neueste zuerst",
+  oldest: "\u00c4lteste zuerst",
+  score_high: "Beste Bewertung",
+  score_low: "Schlechteste Bewertung",
+};
 
 type Props = {
   title: string;
@@ -52,6 +75,8 @@ const IDEA_FIELDS = [
   "scraped_hook_source_id",
   "eval_score",
   "date_created",
+  "feedback_intent",
+  "human_eval_score",
 ];
 
 export function IdeasGrid({
@@ -67,10 +92,12 @@ export function IdeasGrid({
   const [feedbackIdea, setFeedbackIdea] = useState<HookIdea | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("newest");
+  const [formatFilter, setFormatFilter] = useState<FormatFilter>("all");
+  const [timeRangeFilter, setTimeRangeFilter] = useState<TimeRangeFilter>("all");
+  const [creatorFilter, setCreatorFilter] = useState<Set<string>>(new Set());
+  const [hideIncomplete, setHideIncomplete] = useState(false);
 
-  const sortConfig =
-    SORT_OPTIONS.find((o) => o.value === sortKey) ?? SORT_OPTIONS[0];
-  const filterKey = `${status ?? "any"}-${onlyCommented ? "commented" : "all"}-${sortKey}`;
+  const filterKey = `${status ?? "any"}-${onlyCommented ? "commented" : "all"}`;
 
   const {
     data: ideasData,
@@ -87,7 +114,7 @@ export function IdeasGrid({
         readItems("hook_ideas" as never, {
           filter,
           fields: IDEA_FIELDS,
-          sort: sortConfig.sort,
+          sort: ["-date_created"],
           limit: 200,
         } as never)
       ) as Promise<HookIdea[]>;
@@ -130,6 +157,11 @@ export function IdeasGrid({
             "thumbnail_file",
             "posted_at",
             "views_count",
+            "hook_type",
+            "hook_structure",
+            "transcript_first_30s",
+            "spoken_hook",
+            "spoken_hook_de",
           ],
           limit: sourceIds.length,
         } as never)
@@ -145,9 +177,83 @@ export function IdeasGrid({
     return m;
   }, [scrapedHooks]);
 
-  const ideas = categoryFilter
-    ? allIdeas.filter((i) => i.category === categoryFilter)
-    : allIdeas;
+  const availableCreators = useMemo(() => {
+    const counts = new Map<string, number>();
+    allIdeas.forEach((i) => {
+      if (!i.scraped_hook_source_id) return;
+      const src = sourceMap.get(i.scraped_hook_source_id);
+      if (!src?.account_username) return;
+      counts.set(src.account_username, (counts.get(src.account_username) ?? 0) + 1);
+    });
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count]) => ({ name, count }));
+  }, [allIdeas, sourceMap]);
+
+  const timeRangeCutoffMs = useMemo(() => {
+    const opt = TIME_RANGE_OPTIONS.find((o) => o.value === timeRangeFilter);
+    if (!opt?.days) return null;
+    return Date.now() - opt.days * 24 * 60 * 60 * 1000;
+  }, [timeRangeFilter]);
+
+  const ideas = useMemo(() => {
+    const getPostedAtMs = (idea: HookIdea): number => {
+      if (!idea.scraped_hook_source_id) return 0;
+      const src = sourceMap.get(idea.scraped_hook_source_id);
+      if (!src?.posted_at) return 0;
+      const t = new Date(src.posted_at).getTime();
+      return Number.isFinite(t) ? t : 0;
+    };
+    const isComplete = (src: ScrapedHook | undefined): boolean => {
+      if (!src) return false;
+      if (!src.thumbnail_file) return false;
+      return Boolean(src.visual_hook_text || src.spoken_hook);
+    };
+    const filtered = allIdeas.filter((i) => {
+      if (categoryFilter && i.category !== categoryFilter) return false;
+      const src = i.scraped_hook_source_id
+        ? sourceMap.get(i.scraped_hook_source_id)
+        : undefined;
+      if (formatFilter !== "all" && src?.roll_type !== formatFilter) return false;
+      if (creatorFilter.size > 0) {
+        if (!src?.account_username || !creatorFilter.has(src.account_username))
+          return false;
+      }
+      if (timeRangeCutoffMs !== null) {
+        const paMs = getPostedAtMs(i);
+        if (paMs < timeRangeCutoffMs) return false;
+      }
+      if (hideIncomplete && !isComplete(src)) return false;
+      return true;
+    });
+    const sorted = [...filtered].sort((a, b) => {
+      const paA = getPostedAtMs(a);
+      const paB = getPostedAtMs(b);
+      if (sortKey === "newest") return paB - paA;
+      if (sortKey === "oldest") return paA - paB;
+      const evA = a.eval_score ?? 0;
+      const evB = b.eval_score ?? 0;
+      if (sortKey === "score_high") {
+        if (evB !== evA) return evB - evA;
+        return paB - paA;
+      }
+      if (sortKey === "score_low") {
+        if (evA !== evB) return evA - evB;
+        return paB - paA;
+      }
+      return 0;
+    });
+    return sorted;
+  }, [
+    allIdeas,
+    sourceMap,
+    categoryFilter,
+    sortKey,
+    formatFilter,
+    creatorFilter,
+    timeRangeCutoffMs,
+    hideIncomplete,
+  ]);
 
   const categoryCounts = allIdeas.reduce<Record<string, number>>((acc, i) => {
     if (i.category) acc[i.category] = (acc[i.category] ?? 0) + 1;
@@ -197,9 +303,9 @@ export function IdeasGrid({
             <SelectValue placeholder="Sortierung" />
           </SelectTrigger>
           <SelectContent>
-            {SORT_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                {opt.label}
+            {(Object.keys(SORT_LABELS) as SortKey[]).map((key) => (
+              <SelectItem key={key} value={key} className="text-xs">
+                {SORT_LABELS[key]}
               </SelectItem>
             ))}
           </SelectContent>
@@ -207,7 +313,7 @@ export function IdeasGrid({
       </div>
 
       {availableCategories.length > 1 && (
-        <ScrollArea className="mb-6 w-full whitespace-nowrap">
+        <ScrollArea className="mb-3 w-full whitespace-nowrap">
           <div className="flex gap-1.5 pb-2">
             <Button
               variant={categoryFilter === null ? "default" : "outline"}
@@ -232,6 +338,104 @@ export function IdeasGrid({
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
       )}
+
+      <div className="mb-6 flex flex-wrap items-center gap-2">
+        <div className="flex gap-1">
+          {FORMAT_OPTIONS.map((opt) => (
+            <Button
+              key={opt.value}
+              variant={formatFilter === opt.value ? "default" : "outline"}
+              size="sm"
+              className="h-8 px-3 text-xs"
+              onClick={() => setFormatFilter(opt.value)}
+            >
+              {opt.label}
+            </Button>
+          ))}
+        </div>
+        <div className="flex gap-1">
+          {TIME_RANGE_OPTIONS.map((opt) => (
+            <Button
+              key={opt.value}
+              variant={timeRangeFilter === opt.value ? "default" : "outline"}
+              size="sm"
+              className="h-8 px-3 text-xs"
+              onClick={() => setTimeRangeFilter(opt.value)}
+            >
+              {opt.label}
+            </Button>
+          ))}
+        </div>
+        {availableCreators.length > 0 && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={creatorFilter.size > 0 ? "default" : "outline"}
+                size="sm"
+                className="h-8 px-3 text-xs gap-1"
+              >
+                <Users className="h-3.5 w-3.5" />
+                {creatorFilter.size === 0
+                  ? "Creators"
+                  : `${creatorFilter.size} Creator${creatorFilter.size > 1 ? "s" : ""}`}
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-0" align="start">
+              <div className="flex items-center justify-between border-b px-3 py-2">
+                <span className="text-xs font-medium">Creators</span>
+                {creatorFilter.size > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-[11px]"
+                    onClick={() => setCreatorFilter(new Set())}
+                  >
+                    Zuruecksetzen
+                  </Button>
+                )}
+              </div>
+              <ScrollArea className="max-h-64">
+                <div className="p-2 space-y-1">
+                  {availableCreators.map(({ name, count }) => {
+                    const checked = creatorFilter.has(name);
+                    return (
+                      <label
+                        key={name}
+                        className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-accent cursor-pointer"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(v) => {
+                            setCreatorFilter((prev) => {
+                              const next = new Set(prev);
+                              if (v) next.add(name);
+                              else next.delete(name);
+                              return next;
+                            });
+                          }}
+                        />
+                        <span className="flex-1 text-xs truncate">@{name}</span>
+                        <span className="text-[10px] text-muted-foreground font-mono">
+                          {count}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </PopoverContent>
+          </Popover>
+        )}
+        <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+          <Switch
+            checked={hideIncomplete}
+            onCheckedChange={setHideIncomplete}
+            aria-label="Unvollstaendige verbergen"
+          />
+          Unvollstaendige verbergen
+        </label>
+      </div>
 
       {ideas.length === 0 ? (
         <EmptyState

@@ -13,7 +13,7 @@ type Props = {
 
 function Placeholder({ label }: { label: string }) {
   return (
-    <div className="flex h-24 w-full items-center justify-center gap-2 rounded-md border border-dashed border-border bg-muted/40 text-[11px] text-muted-foreground">
+    <div className="flex aspect-[9/16] w-full items-center justify-center gap-2 rounded-md border border-dashed border-border bg-muted/40 text-[11px] text-muted-foreground">
       <ImageOff className="h-3.5 w-3.5" />
       {label}
     </div>
@@ -40,17 +40,17 @@ export function ScreenshotPreview({ src, alt = "Original-Screenshot" }: Props) {
           loading="lazy"
           referrerPolicy="no-referrer"
           onError={() => setFailed(true)}
-          className="h-24 w-full object-cover"
+          className="aspect-[9/16] w-full object-cover"
         />
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl p-0 overflow-hidden">
+        <DialogContent className="max-w-3xl p-0 overflow-hidden bg-black">
           <DialogTitle className="sr-only">{alt}</DialogTitle>
           <img
             src={src}
             alt={alt}
             referrerPolicy="no-referrer"
-            className="w-full h-auto object-contain"
+            className="max-h-[85vh] w-full object-contain"
           />
         </DialogContent>
       </Dialog>
