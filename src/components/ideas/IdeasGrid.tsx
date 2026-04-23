@@ -23,7 +23,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { CATEGORY_LABEL } from "@/lib/categories";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { IdeaCard, type HookIdea, type ScrapedHook, type IdeaCardVariant } from "./IdeaCard";
+import { type HookIdea, type ScrapedHook, type IdeaCardVariant } from "./IdeaCard";
+import { ReelGroupCard } from "./ReelGroupCard";
 import { FeedbackDialog } from "./FeedbackDialog";
 
 type StatusFilter = "new" | "liked" | "dismissed" | null;
@@ -40,10 +41,10 @@ const FORMAT_OPTIONS: { value: FormatFilter; label: string }[] = [
 ];
 
 const TIME_RANGE_OPTIONS: { value: TimeRangeFilter; label: string; days: number | null }[] = [
-  { value: "all", label: "Alle Zeit", days: null },
-  { value: "7", label: "7T", days: 7 },
-  { value: "14", label: "14T", days: 14 },
-  { value: "28", label: "28T", days: 28 },
+  { value: "all", label: "Alle Reels", days: null },
+  { value: "7", label: "Reel <7T", days: 7 },
+  { value: "14", label: "Reel <14T", days: 14 },
+  { value: "28", label: "Reel <28T", days: 28 },
 ];
 
 const SORT_LABELS: Record<SortKey, string> = {
@@ -177,9 +178,47 @@ export function IdeasGrid({
     return m;
   }, [scrapedHooks]);
 
+  const timeRangeCutoffMs = useMemo(() => {
+    const opt = TIME_RANGE_OPTIONS.find((o) => o.value === timeRangeFilter);
+    if (!opt?.days) return null;
+    return Date.now() - opt.days * 24 * 60 * 60 * 1000;
+  }, [timeRangeFilter]);
+
+  const getPostedAtMs = (idea: HookIdea, map: Map<number, ScrapedHook>): number => {
+    if (!idea.scraped_hook_source_id) return 0;
+    const src = map.get(idea.scraped_hook_source_id);
+    if (!src?.posted_at) return 0;
+    const t = new Date(src.posted_at).getTime();
+    return Number.isFinite(t) ? t : 0;
+  };
+
+  const isComplete = (src: ScrapedHook | undefined): boolean => {
+    if (!src) return false;
+    if (!src.thumbnail_file) return false;
+    return Boolean(src.visual_hook_text || src.spoken_hook);
+  };
+
+  // Pre-creator-filter ideas (category + format + time + incomplete applied).
+  // Used both for deriving creator counts AND for final filtered+sorted list.
+  const ideasBeforeCreator = useMemo(() => {
+    return allIdeas.filter((i) => {
+      if (categoryFilter && i.category !== categoryFilter) return false;
+      const src = i.scraped_hook_source_id
+        ? sourceMap.get(i.scraped_hook_source_id)
+        : undefined;
+      if (formatFilter !== "all" && src?.roll_type !== formatFilter) return false;
+      if (timeRangeCutoffMs !== null) {
+        const paMs = getPostedAtMs(i, sourceMap);
+        if (paMs < timeRangeCutoffMs) return false;
+      }
+      if (hideIncomplete && !isComplete(src)) return false;
+      return true;
+    });
+  }, [allIdeas, sourceMap, categoryFilter, formatFilter, timeRangeCutoffMs, hideIncomplete]);
+
   const availableCreators = useMemo(() => {
     const counts = new Map<string, number>();
-    allIdeas.forEach((i) => {
+    ideasBeforeCreator.forEach((i) => {
       if (!i.scraped_hook_source_id) return;
       const src = sourceMap.get(i.scraped_hook_source_id);
       if (!src?.account_username) return;
@@ -188,47 +227,20 @@ export function IdeasGrid({
     return Array.from(counts.entries())
       .sort((a, b) => b[1] - a[1])
       .map(([name, count]) => ({ name, count }));
-  }, [allIdeas, sourceMap]);
-
-  const timeRangeCutoffMs = useMemo(() => {
-    const opt = TIME_RANGE_OPTIONS.find((o) => o.value === timeRangeFilter);
-    if (!opt?.days) return null;
-    return Date.now() - opt.days * 24 * 60 * 60 * 1000;
-  }, [timeRangeFilter]);
+  }, [ideasBeforeCreator, sourceMap]);
 
   const ideas = useMemo(() => {
-    const getPostedAtMs = (idea: HookIdea): number => {
-      if (!idea.scraped_hook_source_id) return 0;
-      const src = sourceMap.get(idea.scraped_hook_source_id);
-      if (!src?.posted_at) return 0;
-      const t = new Date(src.posted_at).getTime();
-      return Number.isFinite(t) ? t : 0;
-    };
-    const isComplete = (src: ScrapedHook | undefined): boolean => {
-      if (!src) return false;
-      if (!src.thumbnail_file) return false;
-      return Boolean(src.visual_hook_text || src.spoken_hook);
-    };
-    const filtered = allIdeas.filter((i) => {
-      if (categoryFilter && i.category !== categoryFilter) return false;
+    const filtered = ideasBeforeCreator.filter((i) => {
+      if (creatorFilter.size === 0) return true;
       const src = i.scraped_hook_source_id
         ? sourceMap.get(i.scraped_hook_source_id)
         : undefined;
-      if (formatFilter !== "all" && src?.roll_type !== formatFilter) return false;
-      if (creatorFilter.size > 0) {
-        if (!src?.account_username || !creatorFilter.has(src.account_username))
-          return false;
-      }
-      if (timeRangeCutoffMs !== null) {
-        const paMs = getPostedAtMs(i);
-        if (paMs < timeRangeCutoffMs) return false;
-      }
-      if (hideIncomplete && !isComplete(src)) return false;
-      return true;
+      if (!src?.account_username) return false;
+      return creatorFilter.has(src.account_username);
     });
-    const sorted = [...filtered].sort((a, b) => {
-      const paA = getPostedAtMs(a);
-      const paB = getPostedAtMs(b);
+    return [...filtered].sort((a, b) => {
+      const paA = getPostedAtMs(a, sourceMap);
+      const paB = getPostedAtMs(b, sourceMap);
       if (sortKey === "newest") return paB - paA;
       if (sortKey === "oldest") return paA - paB;
       const evA = a.eval_score ?? 0;
@@ -243,17 +255,27 @@ export function IdeasGrid({
       }
       return 0;
     });
-    return sorted;
-  }, [
-    allIdeas,
-    sourceMap,
-    categoryFilter,
-    sortKey,
-    formatFilter,
-    creatorFilter,
-    timeRangeCutoffMs,
-    hideIncomplete,
-  ]);
+  }, [ideasBeforeCreator, sourceMap, creatorFilter, sortKey]);
+
+  // Group ideas by scraped_hook_source_id for the reel-centric layout.
+  const groupedReels = useMemo(() => {
+    const groups = new Map<number | string, { source: ScrapedHook | undefined; ideas: HookIdea[] }>();
+    ideas.forEach((idea) => {
+      const key = idea.scraped_hook_source_id ?? `_orphan_${idea.id}`;
+      const source = idea.scraped_hook_source_id
+        ? sourceMap.get(idea.scraped_hook_source_id)
+        : undefined;
+      const existing = groups.get(key);
+      if (existing) {
+        existing.ideas.push(idea);
+      } else {
+        groups.set(key, { source, ideas: [idea] });
+      }
+    });
+    return Array.from(groups.values());
+  }, [ideas, sourceMap]);
+
+  const totalIdeaCount = ideas.length;
 
   const categoryCounts = allIdeas.reduce<Record<string, number>>((acc, i) => {
     if (i.category) acc[i.category] = (acc[i.category] ?? 0) + 1;
@@ -293,9 +315,13 @@ export function IdeasGrid({
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {ideas.length}
-            {categoryFilter ? ` von ${allIdeas.length}` : ""}{" "}
+            {groupedReels.length} Reel{groupedReels.length !== 1 ? "s" : ""}
+            {" · "}
+            {totalIdeaCount}{" "}
             {subtitle ?? "Ideen"}
+            {categoryFilter || creatorFilter.size > 0 || formatFilter !== "all" || timeRangeCutoffMs !== null
+              ? ` (gefiltert von ${allIdeas.length})`
+              : ""}
           </p>
         </div>
         <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
@@ -437,24 +463,20 @@ export function IdeasGrid({
         </label>
       </div>
 
-      {ideas.length === 0 ? (
+      {groupedReels.length === 0 ? (
         <EmptyState
           icon={<Inbox className="h-6 w-6" />}
           title={emptyTitle}
           description={emptyDescription}
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           <AnimatePresence mode="popLayout">
-            {ideas.map((idea) => (
-              <IdeaCard
-                key={idea.id}
-                idea={idea}
-                source={
-                  idea.scraped_hook_source_id
-                    ? sourceMap.get(idea.scraped_hook_source_id)
-                    : undefined
-                }
+            {groupedReels.map((group) => (
+              <ReelGroupCard
+                key={group.ideas[0].scraped_hook_source_id ?? `orphan-${group.ideas[0].id}`}
+                source={group.source}
+                ideas={group.ideas}
                 variant={variant}
                 onFeedback={openFeedback}
               />
