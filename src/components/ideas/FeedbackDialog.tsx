@@ -55,7 +55,7 @@ export function FeedbackDialog({ open, onOpenChange, idea }: Props) {
         <DialogHeader>
           <DialogTitle>Feedback zu dieser Idee</DialogTitle>
           <DialogDescription>
-            Kurze Notiz — was soll anders werden? (Optional)
+            Optional — kurze Notiz, warum die Idee passt (oder nicht). Hilft Claude beim Lernen.
           </DialogDescription>
         </DialogHeader>
         {idea && (
