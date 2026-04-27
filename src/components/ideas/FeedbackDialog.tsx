@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useUpdate } from "@refinedev/core";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ type Props = {
 
 export function FeedbackDialog({ open, onOpenChange, idea }: Props) {
   const [text, setText] = useState("");
+  const queryClient = useQueryClient();
   const {
     mutate: updateIdea,
     mutation: { isPending },
@@ -42,6 +44,7 @@ export function FeedbackDialog({ open, onOpenChange, idea }: Props) {
       {
         onSuccess: () => {
           toast.success("Feedback gespeichert");
+          queryClient.invalidateQueries({ queryKey: ["hook_ideas_grid"] });
           onOpenChange(false);
         },
         onError: (e) => toast.error(`Fehler: ${e.message}`),

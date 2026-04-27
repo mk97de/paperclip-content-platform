@@ -252,7 +252,7 @@ export function IdeaCard({ idea, source, variant, onFeedback }: Props) {
             </p>
           )}
 
-          {idea.martin_feedback && variant === "commented" && (
+          {idea.martin_feedback && (
             <div className="rounded-md bg-muted/60 border border-border/60 p-3 space-y-1">
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
                 Dein Feedback

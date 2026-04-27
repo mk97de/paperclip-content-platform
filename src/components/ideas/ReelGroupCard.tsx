@@ -191,7 +191,7 @@ function IdeaRow({ idea, variant, onFeedback, compact = false }: IdeaRowProps) {
         </p>
       )}
 
-      {idea.martin_feedback && variant === "commented" && (
+      {idea.martin_feedback && (
         <div className="rounded-md bg-muted/60 border border-border/60 p-2.5 space-y-1">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
             Dein Feedback
