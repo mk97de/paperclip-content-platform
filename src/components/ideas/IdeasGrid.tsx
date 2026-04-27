@@ -124,6 +124,8 @@ export function IdeasGrid({
       const filter: Record<string, unknown> = {};
       if (status) filter.status = { _eq: status };
       if (onlyCommented) filter.martin_feedback = { _nnull: true };
+      // Inbox: bewertete (Kommentar gesetzt) Ideen ausblenden — wandern zur Commented-View
+      if (status === "new") filter.martin_feedback = { _null: true };
       return directusClient.request(
         readItems("hook_ideas" as never, {
           filter,

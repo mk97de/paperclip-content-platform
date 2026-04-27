@@ -72,7 +72,11 @@ function IdeaRow({ idea, variant, onFeedback, compact = false }: IdeaRowProps) {
     queryClient.invalidateQueries({ queryKey: ["hook_ideas_grid"] });
   };
 
-  const setStatus = (status: HookIdea["status"], label: string) => {
+  const setStatus = (
+    status: HookIdea["status"],
+    label: string,
+    promptForComment = false
+  ) => {
     updateIdea(
       {
         resource: "hook_ideas",
@@ -84,6 +88,7 @@ function IdeaRow({ idea, variant, onFeedback, compact = false }: IdeaRowProps) {
         onSuccess: () => {
           toast.success(label);
           invalidateIdeas();
+          if (promptForComment) onFeedback(idea);
         },
         onError: (e) => toast.error(`Fehler: ${e.message}`),
       }
@@ -103,6 +108,7 @@ function IdeaRow({ idea, variant, onFeedback, compact = false }: IdeaRowProps) {
           toast.success(label);
           setDismissMenuOpen(false);
           invalidateIdeas();
+          onFeedback(idea);
         },
         onError: (e) => toast.error(`Fehler: ${e.message}`),
       }
@@ -197,7 +203,7 @@ function IdeaRow({ idea, variant, onFeedback, compact = false }: IdeaRowProps) {
             size="sm"
             className="flex-1 h-9 border bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border-emerald-200/80 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 dark:text-emerald-200 dark:border-emerald-800/60 shadow-none"
             disabled={busy}
-            onClick={() => setStatus("liked", "Gefällt mir")}
+            onClick={() => setStatus("liked", "Gefällt mir", true)}
             aria-label="Gefaellt mir"
           >
             <ThumbsUp className="h-4 w-4" />
@@ -274,7 +280,7 @@ function IdeaRow({ idea, variant, onFeedback, compact = false }: IdeaRowProps) {
           <Button size="sm" variant="outline" className="h-9" disabled={busy} onClick={() => onFeedback(idea)} aria-label="Feedback">
             <MessageSquare className="h-4 w-4" />
           </Button>
-          <Button size="sm" variant="outline" className="h-9" disabled={busy} onClick={() => setStatus("dismissed", "Verworfen")} aria-label="Verwerfen">
+          <Button size="sm" variant="outline" className="h-9" disabled={busy} onClick={() => setStatus("dismissed", "Verworfen", true)} aria-label="Verwerfen">
             <ThumbsDown className="h-4 w-4" />
           </Button>
         </div>
@@ -286,7 +292,7 @@ function IdeaRow({ idea, variant, onFeedback, compact = false }: IdeaRowProps) {
             size="sm"
             className="flex-1 h-9 border bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border-emerald-200/80 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 dark:text-emerald-200 dark:border-emerald-800/60 shadow-none"
             disabled={busy}
-            onClick={() => setStatus("liked", "Gefällt mir")}
+            onClick={() => setStatus("liked", "Gefällt mir", true)}
             aria-label="Gefaellt mir"
           >
             <ThumbsUp className="h-4 w-4" />
@@ -295,7 +301,7 @@ function IdeaRow({ idea, variant, onFeedback, compact = false }: IdeaRowProps) {
             <MessageSquare className="h-4 w-4 mr-1" />
             Feedback
           </Button>
-          <Button size="sm" variant="outline" className="h-9" disabled={busy} onClick={() => setStatus("dismissed", "Verworfen")} aria-label="Verwerfen">
+          <Button size="sm" variant="outline" className="h-9" disabled={busy} onClick={() => setStatus("dismissed", "Verworfen", true)} aria-label="Verwerfen">
             <ThumbsDown className="h-4 w-4" />
           </Button>
         </div>
