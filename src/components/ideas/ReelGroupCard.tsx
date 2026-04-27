@@ -95,7 +95,11 @@ function IdeaRow({ idea, variant, onFeedback, compact = false }: IdeaRowProps) {
     );
   };
 
-  const dismissWithIntent = (intent: FeedbackIntent, label: string) => {
+  const dismissWithIntent = (
+    intent: FeedbackIntent,
+    label: string,
+    promptForComment = false
+  ) => {
     updateIdea(
       {
         resource: "hook_ideas",
@@ -108,7 +112,7 @@ function IdeaRow({ idea, variant, onFeedback, compact = false }: IdeaRowProps) {
           toast.success(label);
           setDismissMenuOpen(false);
           invalidateIdeas();
-          onFeedback(idea);
+          if (promptForComment) onFeedback(idea);
         },
         onError: (e) => toast.error(`Fehler: ${e.message}`),
       }
@@ -203,7 +207,7 @@ function IdeaRow({ idea, variant, onFeedback, compact = false }: IdeaRowProps) {
             size="sm"
             className="flex-1 h-9 border bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border-emerald-200/80 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 dark:text-emerald-200 dark:border-emerald-800/60 shadow-none"
             disabled={busy}
-            onClick={() => setStatus("liked", "Gefällt mir", true)}
+            onClick={() => setStatus("liked", "Gefällt mir")}
             aria-label="Gefaellt mir"
           >
             <ThumbsUp className="h-4 w-4" />
@@ -261,13 +265,24 @@ function IdeaRow({ idea, variant, onFeedback, compact = false }: IdeaRowProps) {
               variant="outline"
               className="flex-1 h-9 text-xs"
               disabled={busy}
-              onClick={() => dismissWithIntent("content_quality", "Verworfen (Content-Veto)")}
-              title="Idee passt inhaltlich nicht - Agent soll lernen"
+              onClick={() => dismissWithIntent("content_quality", "Verworfen")}
+              title="Idee passt inhaltlich nicht - kein Kommentar"
             >
               <ThumbsDown className="h-3.5 w-3.5 mr-1" />
               Passt nicht
             </Button>
           </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full h-9 text-xs"
+            disabled={busy}
+            onClick={() => dismissWithIntent("content_quality", "Verworfen — Notiz folgt", true)}
+            title="Passt nicht - mit kurzer Begruendung fuer Claude"
+          >
+            <MessageSquare className="h-3.5 w-3.5 mr-1" />
+            Passt nicht — mit Begruendung
+          </Button>
         </div>
       )}
 
@@ -280,7 +295,7 @@ function IdeaRow({ idea, variant, onFeedback, compact = false }: IdeaRowProps) {
           <Button size="sm" variant="outline" className="h-9" disabled={busy} onClick={() => onFeedback(idea)} aria-label="Feedback">
             <MessageSquare className="h-4 w-4" />
           </Button>
-          <Button size="sm" variant="outline" className="h-9" disabled={busy} onClick={() => setStatus("dismissed", "Verworfen", true)} aria-label="Verwerfen">
+          <Button size="sm" variant="outline" className="h-9" disabled={busy} onClick={() => setStatus("dismissed", "Verworfen")} aria-label="Verwerfen">
             <ThumbsDown className="h-4 w-4" />
           </Button>
         </div>
@@ -292,7 +307,7 @@ function IdeaRow({ idea, variant, onFeedback, compact = false }: IdeaRowProps) {
             size="sm"
             className="flex-1 h-9 border bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border-emerald-200/80 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 dark:text-emerald-200 dark:border-emerald-800/60 shadow-none"
             disabled={busy}
-            onClick={() => setStatus("liked", "Gefällt mir", true)}
+            onClick={() => setStatus("liked", "Gefällt mir")}
             aria-label="Gefaellt mir"
           >
             <ThumbsUp className="h-4 w-4" />
@@ -301,7 +316,7 @@ function IdeaRow({ idea, variant, onFeedback, compact = false }: IdeaRowProps) {
             <MessageSquare className="h-4 w-4 mr-1" />
             Feedback
           </Button>
-          <Button size="sm" variant="outline" className="h-9" disabled={busy} onClick={() => setStatus("dismissed", "Verworfen", true)} aria-label="Verwerfen">
+          <Button size="sm" variant="outline" className="h-9" disabled={busy} onClick={() => setStatus("dismissed", "Verworfen")} aria-label="Verwerfen">
             <ThumbsDown className="h-4 w-4" />
           </Button>
         </div>
