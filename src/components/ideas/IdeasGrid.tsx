@@ -33,6 +33,7 @@ type SortKey = "newest" | "oldest" | "score_high" | "score_low";
 
 type FormatFilter = "all" | "a_roll" | "b_roll";
 type TimeRangeFilter = "all" | "7" | "14" | "28";
+type ViralTier = "S" | "A" | "B" | "C";
 
 const FORMAT_OPTIONS: { value: FormatFilter; label: string }[] = [
   { value: "all", label: "Alle" },
@@ -46,6 +47,15 @@ const TIME_RANGE_OPTIONS: { value: TimeRangeFilter; label: string; days: number 
   { value: "14", label: "Reel <14T", days: 14 },
   { value: "28", label: "Reel <28T", days: 28 },
 ];
+
+const VIRAL_TIER_OPTIONS: { value: ViralTier; label: string }[] = [
+  { value: "S", label: "S" },
+  { value: "A", label: "A" },
+  { value: "B", label: "B" },
+  { value: "C", label: "C" },
+];
+
+const VIRAL_TIER_DEFAULT: Set<string> = new Set(["S", "A"]);
 
 const SORT_LABELS: Record<SortKey, string> = {
   newest: "Neueste zuerst",
@@ -97,6 +107,9 @@ export function IdeasGrid({
   const [timeRangeFilter, setTimeRangeFilter] = useState<TimeRangeFilter>("all");
   const [creatorFilter, setCreatorFilter] = useState<Set<string>>(new Set());
   const [hideIncomplete, setHideIncomplete] = useState(false);
+  const [viralTierFilter, setViralTierFilter] = useState<Set<string>>(
+    () => new Set(VIRAL_TIER_DEFAULT)
+  );
 
   const filterKey = `${status ?? "any"}-${onlyCommented ? "commented" : "all"}`;
 
@@ -218,10 +231,26 @@ export function IdeasGrid({
         const paMs = getPostedAtMs(i, sourceMap);
         if (paMs < timeRangeCutoffMs) return false;
       }
+      if (
+        viralTierFilter.size > 0 &&
+        viralTierFilter.size < VIRAL_TIER_OPTIONS.length &&
+        src?.viral_tier &&
+        !viralTierFilter.has(src.viral_tier)
+      ) {
+        return false;
+      }
       if (hideIncomplete && !isComplete(src)) return false;
       return true;
     });
-  }, [allIdeas, sourceMap, categoryFilter, formatFilter, timeRangeCutoffMs, hideIncomplete]);
+  }, [
+    allIdeas,
+    sourceMap,
+    categoryFilter,
+    formatFilter,
+    timeRangeCutoffMs,
+    hideIncomplete,
+    viralTierFilter,
+  ]);
 
   const availableCreators = useMemo(() => {
     const counts = new Map<string, number>();
@@ -326,7 +355,11 @@ export function IdeasGrid({
             {" · "}
             {totalIdeaCount}{" "}
             {subtitle ?? "Ideen"}
-            {categoryFilter || creatorFilter.size > 0 || formatFilter !== "all" || timeRangeCutoffMs !== null
+            {categoryFilter ||
+            creatorFilter.size > 0 ||
+            formatFilter !== "all" ||
+            timeRangeCutoffMs !== null ||
+            (viralTierFilter.size > 0 && viralTierFilter.size < VIRAL_TIER_OPTIONS.length)
               ? ` (gefiltert von ${allIdeas.length})`
               : ""}
           </p>
@@ -398,6 +431,32 @@ export function IdeasGrid({
               {opt.label}
             </Button>
           ))}
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-[11px] text-muted-foreground mr-1">Tier</span>
+          {VIRAL_TIER_OPTIONS.map((opt) => {
+            const active = viralTierFilter.has(opt.value);
+            return (
+              <Button
+                key={opt.value}
+                variant={active ? "default" : "outline"}
+                size="sm"
+                className="h-8 w-8 p-0 text-xs font-mono"
+                onClick={() => {
+                  setViralTierFilter((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(opt.value)) next.delete(opt.value);
+                    else next.add(opt.value);
+                    return next;
+                  });
+                }}
+                aria-pressed={active}
+                aria-label={`Tier ${opt.label} ${active ? "ausblenden" : "einblenden"}`}
+              >
+                {opt.label}
+              </Button>
+            );
+          })}
         </div>
         {availableCreators.length > 0 && (
           <Popover>
