@@ -290,7 +290,7 @@ export function IdeaCard({ idea, source, variant, onFeedback }: Props) {
               {source.hook_type === "information_list" &&
                 Array.isArray(source.hook_structure) &&
                 source.hook_structure.length > 0 && (
-                  <div className="rounded-md border border-amber-200/70 bg-amber-50/70 dark:bg-amber-900/20 dark:border-amber-800/40 px-3 py-2 space-y-2">
+                  <div className="rounded-md border border-l-4 border-amber-200/70 border-l-amber-500 bg-amber-50/70 dark:bg-amber-900/20 dark:border-amber-800/40 dark:border-l-amber-400 px-3 py-2 space-y-2">
                     <div className="flex items-center gap-1 text-[10px] uppercase tracking-wider font-medium text-amber-700 dark:text-amber-300">
                       <Quote className="h-3 w-3" />
                       Original Hook (Liste, Video)
@@ -317,7 +317,7 @@ export function IdeaCard({ idea, source, variant, onFeedback }: Props) {
                 )}
               {source.visual_hook_text &&
                 source.hook_type !== "information_list" && (
-                  <div className="rounded-md border border-amber-200/70 bg-amber-50/70 dark:bg-amber-900/20 dark:border-amber-800/40 px-3 py-2 space-y-1">
+                  <div className="rounded-md border border-l-4 border-amber-200/70 border-l-amber-500 bg-amber-50/70 dark:bg-amber-900/20 dark:border-amber-800/40 dark:border-l-amber-400 px-3 py-2 space-y-1">
                     <div className="flex items-center gap-1 text-[10px] uppercase tracking-wider font-medium text-amber-700 dark:text-amber-300">
                       <Quote className="h-3 w-3" />
                       Original Hook (Video)
@@ -328,7 +328,7 @@ export function IdeaCard({ idea, source, variant, onFeedback }: Props) {
                   </div>
                 )}
               {(source.spoken_hook || source.transcript_first_30s) && (
-                <div className="rounded-md border border-sky-200/70 bg-sky-50/70 dark:bg-sky-900/20 dark:border-sky-800/40 px-3 py-2 space-y-1">
+                <div className="rounded-md border border-l-4 border-sky-200/70 border-l-sky-500 bg-sky-50/70 dark:bg-sky-900/20 dark:border-sky-800/40 dark:border-l-sky-400 px-3 py-2 space-y-1">
                   <div className="flex items-center gap-1 text-[10px] uppercase tracking-wider font-medium text-sky-700 dark:text-sky-300">
                     <Quote className="h-3 w-3" />
                     Gesprochener Hook (A-Roll)
