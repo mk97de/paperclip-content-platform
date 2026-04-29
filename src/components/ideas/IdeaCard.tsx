@@ -108,6 +108,7 @@ export function IdeaCard({ idea, source, variant, onFeedback }: Props) {
   const [captionOpen, setCaptionOpen] = useState(false);
   const [transcriptOpen, setTranscriptOpen] = useState(false);
   const [dismissMenuOpen, setDismissMenuOpen] = useState(false);
+  const [likeMenuOpen, setLikeMenuOpen] = useState(false);
   const queryClient = useQueryClient();
   const {
     mutate: updateIdea,
@@ -415,13 +416,13 @@ export function IdeaCard({ idea, source, variant, onFeedback }: Props) {
         </CardContent>
 
         <CardFooter className="gap-2 border-t pt-4 flex-col items-stretch">
-          {variant === "inbox" && !dismissMenuOpen && (
+          {variant === "inbox" && !dismissMenuOpen && !likeMenuOpen && (
             <div className="flex gap-2">
               <Button
                 size="default"
                 className="flex-1 h-10 border bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border-emerald-200/80 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 dark:text-emerald-200 dark:border-emerald-800/60 shadow-none"
                 disabled={busy}
-                onClick={() => setStatus("liked", "Gefällt mir", true)}
+                onClick={() => setLikeMenuOpen(true)}
                 aria-label="Gefaellt mir"
               >
                 <ThumbsUp className="h-4 w-4" />
@@ -443,6 +444,52 @@ export function IdeaCard({ idea, source, variant, onFeedback }: Props) {
                 aria-label="Verwerfen"
               >
                 <ThumbsDown className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+          {variant === "inbox" && likeMenuOpen && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium text-muted-foreground">
+                  Gefällt mir — wie?
+                </span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 w-6 p-0"
+                  onClick={() => setLikeMenuOpen(false)}
+                  aria-label="Abbrechen"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full h-9 text-xs"
+                disabled={busy}
+                onClick={() => {
+                  setLikeMenuOpen(false);
+                  setStatus("liked", "Gefällt mir");
+                }}
+                title="Gefällt mir - ohne Kommentar"
+              >
+                <ThumbsUp className="h-3.5 w-3.5 mr-1" />
+                Gefällt mir
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full h-9 text-xs"
+                disabled={busy}
+                onClick={() => {
+                  setLikeMenuOpen(false);
+                  setStatus("liked", "Gefällt mir — Notiz folgt", true);
+                }}
+                title="Gefällt mir - mit kurzer Begruendung fuer Claude"
+              >
+                <MessageSquare className="h-3.5 w-3.5 mr-1" />
+                Gefällt mir — mit Begründung
               </Button>
             </div>
           )}

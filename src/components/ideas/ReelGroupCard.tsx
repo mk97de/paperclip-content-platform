@@ -59,6 +59,7 @@ type IdeaRowProps = {
 
 function IdeaRow({ idea, variant, onFeedback, compact = false }: IdeaRowProps) {
   const [dismissMenuOpen, setDismissMenuOpen] = useState(false);
+  const [likeMenuOpen, setLikeMenuOpen] = useState(false);
   const queryClient = useQueryClient();
   const {
     mutate: updateIdea,
@@ -201,14 +202,13 @@ function IdeaRow({ idea, variant, onFeedback, compact = false }: IdeaRowProps) {
       )}
 
       {/* Actions */}
-      {variant === "inbox" && !dismissMenuOpen && (
-        <div className="space-y-1.5 pt-1">
-        <div className="flex gap-2">
+      {variant === "inbox" && !dismissMenuOpen && !likeMenuOpen && (
+        <div className="flex gap-2 pt-1">
           <Button
             size="sm"
             className="flex-1 h-9 border bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border-emerald-200/80 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 dark:text-emerald-200 dark:border-emerald-800/60 shadow-none"
             disabled={busy}
-            onClick={() => setStatus("liked", "Gefällt mir")}
+            onClick={() => setLikeMenuOpen(true)}
             aria-label="Gefaellt mir"
           >
             <ThumbsUp className="h-4 w-4" />
@@ -232,14 +232,51 @@ function IdeaRow({ idea, variant, onFeedback, compact = false }: IdeaRowProps) {
             <ThumbsDown className="h-4 w-4" />
           </Button>
         </div>
-        <button
-          type="button"
-          className="w-full text-[11px] text-muted-foreground hover:text-foreground hover:underline text-right pr-1 disabled:opacity-50"
-          disabled={busy}
-          onClick={() => setStatus("liked", "Gefällt mir — Notiz folgt", true)}
-        >
-          + Gefällt mir, mit Begründung
-        </button>
+      )}
+      {variant === "inbox" && likeMenuOpen && (
+        <div className="space-y-2 pt-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium text-muted-foreground">
+              Gefällt mir — wie?
+            </span>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 w-6 p-0"
+              onClick={() => setLikeMenuOpen(false)}
+              aria-label="Abbrechen"
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full h-9 text-xs"
+            disabled={busy}
+            onClick={() => {
+              setLikeMenuOpen(false);
+              setStatus("liked", "Gefällt mir");
+            }}
+            title="Gefällt mir - ohne Kommentar"
+          >
+            <ThumbsUp className="h-3.5 w-3.5 mr-1" />
+            Gefällt mir
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full h-9 text-xs"
+            disabled={busy}
+            onClick={() => {
+              setLikeMenuOpen(false);
+              setStatus("liked", "Gefällt mir — Notiz folgt", true);
+            }}
+            title="Gefällt mir - mit kurzer Begruendung fuer Claude"
+          >
+            <MessageSquare className="h-3.5 w-3.5 mr-1" />
+            Gefällt mir — mit Begründung
+          </Button>
         </div>
       )}
       {variant === "inbox" && dismissMenuOpen && (
