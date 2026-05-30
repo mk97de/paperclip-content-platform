@@ -38,13 +38,12 @@ const localAuthStorage: AuthenticationStorage = {
   },
 };
 
-function readStoredToken(): string | null {
+function readStoredAuth(): AuthenticationData | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const data = JSON.parse(raw) as AuthenticationData;
-    return data?.access_token ?? null;
+    return JSON.parse(raw) as AuthenticationData;
   } catch {
     return null;
   }
@@ -60,26 +59,51 @@ export const directusClient = createDirectus(DIRECTUS_URL)
   )
   .with(rest({ credentials: "include" }));
 
-// The SDK's AuthenticationStorage.get() is async, so the client's in-memory
-// token is empty during the first requests after page load — leading to 403s
-// even when a valid token sits in localStorage. Prime the in-memory state
-// synchronously at module load, before any request() call fires.
+// Directus rotates the refresh_token on every /auth/refresh: the old token is
+// invalidated, a new one is returned. The SDK's refresh() does NOT dedupe
+// concurrent calls — it just reassigns its in-flight promise. So two parallel
+// refreshes (bootstrap + an onError-401 retry, or autoRefresh) both read the
+// SAME stored refresh_token, the first rotates it, the second double-spends a
+// now-invalid token → 401 → session wiped → /login on every direct navigation.
 //
-// Additionally, the stored access_token may already be expired after idle
-// reloads. Fire a refresh immediately and expose the promise so authProvider.check()
-// can await it — that gates <Authenticated> rendering until a fresh token is in
-// place, preventing the 401 race on pages that fire useList on mount
-// (e.g. /insights/performance, /insights/analyse).
+// Funnel every explicit refresh through one shared in-flight promise. Concurrent
+// callers reuse it instead of firing a second rotation. The SDK's own getToken()
+// auto-refresh path already defers to an in-flight refresh, so this closes the
+// gap for our explicit calls.
+let inflightRefresh: Promise<unknown> | null = null;
+function refreshOnce(): Promise<unknown> {
+  if (!inflightRefresh) {
+    inflightRefresh = directusClient.refresh().finally(() => {
+      inflightRefresh = null;
+    });
+  }
+  return inflightRefresh;
+}
+
+// On a hard load / direct navigation the stored access_token may already be
+// expired. Fire a single proactive refresh and expose the promise so
+// authProvider.check() can await it — that gates <Authenticated> rendering until
+// a fresh token is in place, preventing the 401 race on pages that fire useList
+// on mount (e.g. /insights/performance, /insights/analyse).
+//
+// We deliberately do NOT call directusClient.setToken() here: in SDK v21 that
+// writes { access_token, refresh_token: null, ... }, wiping the refresh_token
+// that login persisted. The SDK reads the full auth record from localAuthStorage
+// per request anyway, so no priming is needed.
 let bootstrapRefreshPromise: Promise<unknown> | null = null;
-const bootstrapToken = readStoredToken();
-if (bootstrapToken) {
-  directusClient.setToken(bootstrapToken);
-  bootstrapRefreshPromise = directusClient.refresh().catch(() => {
-    if (typeof window !== "undefined") {
-      window.localStorage.removeItem(STORAGE_KEY);
-    }
-    return null;
-  });
+const storedAuth = readStoredAuth();
+if (storedAuth?.refresh_token) {
+  const nearExpiry =
+    !storedAuth.expires_at ||
+    storedAuth.expires_at < Date.now() + 60_000;
+  if (nearExpiry) {
+    bootstrapRefreshPromise = refreshOnce().catch(() => {
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem(STORAGE_KEY);
+      }
+      return null;
+    });
+  }
 }
 
 // @tspvivek/refine-directus ships types against @refinedev/core v4 — our app runs on v5.
@@ -167,7 +191,7 @@ export const authProvider: AuthProvider = {
     // that fire queries immediately (e.g. /insights/performance).
     if (status === 401) {
       try {
-        await directusClient.refresh();
+        await refreshOnce();
         return {};
       } catch {
         return { logout: true, redirectTo: "/login" };
