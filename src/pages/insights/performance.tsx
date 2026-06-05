@@ -197,7 +197,14 @@ export const InsightsPerformance = () => {
   const topReels = useMemo(
     () =>
       [...currentReels]
-        .sort((a, b) => (b.viral_score ?? 0) - (a.viral_score ?? 0))
+        .sort((a, b) => {
+          const score = (b.viral_score ?? 0) - (a.viral_score ?? 0);
+          if (score !== 0) return score;
+          // viral_score saturiert bei 1.0 fuer alle S-Tier-Reels — bei Gleichstand
+          // nach Views sortieren, sonst entscheidet die Array-Reihenfolge willkuerlich
+          // und neue High-View-Reels fallen aus den Top 12.
+          return (b.views ?? 0) - (a.views ?? 0);
+        })
         .slice(0, 12),
     [currentReels],
   );
