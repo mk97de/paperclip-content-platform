@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { CategoryBadge } from "@/components/ideas/CategoryBadge";
+import { getAssetUrl } from "@/providers/directus";
 import { cn } from "@/lib/utils";
 
 export type TableReel = {
@@ -18,6 +19,7 @@ export type TableReel = {
   ig_permalink: string | null;
   ig_posted_at: string | null;
   ig_caption_preview: string | null;
+  thumbnail_file: string | null;
   thumbnail_url: string | null;
   category: string | null;
   viral_tier: string | null;
@@ -140,7 +142,7 @@ export function ReelsDataTable({
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40">
-              <TableHead className="w-[60px] hidden sm:table-cell"></TableHead>
+              <TableHead className="w-[64px]"></TableHead>
               <TableHead>Hook / Caption</TableHead>
               <TableHead className="hidden lg:table-cell">Kategorie</TableHead>
               <TableHead className="w-[50px]">Tier</TableHead>
@@ -182,19 +184,24 @@ export function ReelsDataTable({
                   )}
                   onClick={onRowClick ? () => onRowClick(r) : undefined}
                 >
-                  <TableCell className="hidden sm:table-cell">
-                    {r.thumbnail_url && (
-                      <img
-                        src={r.thumbnail_url}
-                        alt=""
-                        loading="lazy"
-                        referrerPolicy="no-referrer"
-                        className="h-10 w-7 rounded object-cover"
-                      />
-                    )}
+                  <TableCell className="py-2">
+                    {(() => {
+                      const thumb = getAssetUrl(r.thumbnail_file) ?? r.thumbnail_url;
+                      return thumb ? (
+                        <img
+                          src={thumb}
+                          alt=""
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                          className="h-20 w-[45px] rounded object-cover bg-muted"
+                        />
+                      ) : (
+                        <div className="h-20 w-[45px] rounded bg-muted" />
+                      );
+                    })()}
                   </TableCell>
-                  <TableCell className="max-w-[280px]">
-                    <p className="line-clamp-2 leading-snug">
+                  <TableCell className="max-w-[360px] min-w-[220px]">
+                    <p className="line-clamp-4 leading-snug">
                       {r.ig_caption_preview ?? "(kein Caption)"}
                     </p>
                     {r.ig_shortcode && (

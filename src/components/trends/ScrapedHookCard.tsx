@@ -47,8 +47,15 @@ function relativeDate(iso: string | null): string {
 export function ScrapedHookCard({ hook }: { hook: ScrapedHook }) {
   const thumbSrc =
     getAssetUrl(hook.thumbnail_file) ?? hook.thumbnail_url ?? null;
-  const text =
-    hook.hook_text || hook.visual_hook_text || hook.spoken_hook || "—";
+  // B-Roll: real hook lives in the overlay (visual_hook_text). hook_text is only
+  // the caption-derived line for B-Roll, so never fall back to it — show the
+  // OCR-pending placeholder instead of a misleading caption.
+  const isBRoll = hook.roll_type === "b_roll";
+  const hookText = isBRoll
+    ? hook.visual_hook_text
+    : hook.hook_text || hook.visual_hook_text || hook.spoken_hook;
+  const text = hookText || (isBRoll ? "OCR ausstehend" : "—");
+  const isPlaceholder = !hookText;
   const tierStyle = hook.viral_tier
     ? TIER_STYLE[hook.viral_tier] ?? TIER_STYLE.C
     : TIER_STYLE.C;
@@ -95,7 +102,11 @@ export function ScrapedHookCard({ hook }: { hook: ScrapedHook }) {
         </div>
       </div>
       <div className="p-3 space-y-1.5">
-        <p className="text-sm leading-snug line-clamp-3 font-medium">
+        <p
+          className={`text-sm leading-snug line-clamp-3 ${
+            isPlaceholder ? "italic text-muted-foreground" : "font-medium"
+          }`}
+        >
           {text}
         </p>
         <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">

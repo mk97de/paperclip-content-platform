@@ -29,6 +29,7 @@ type PerfRow = {
   ig_shortcode: string | null;
   ig_permalink: string | null;
   ig_posted_at: string | null;
+  thumbnail_file: string | null;
   thumbnail_url: string | null;
   ig_caption_preview: string | null;
   views: number | null;
@@ -344,7 +345,7 @@ function TopReelTile({ reel, rank }: { reel: PerfRow; rank: number }) {
       window.open(reel.ig_permalink, "_blank", "noopener,noreferrer");
     }
   };
-  const thumb = reel.thumbnail_url ?? getAssetUrl(reel.ig_media_id);
+  const thumb = getAssetUrl(reel.thumbnail_file) ?? reel.thumbnail_url;
   return (
     <button
       type="button"

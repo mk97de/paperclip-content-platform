@@ -2,6 +2,7 @@ import { ExternalLink, Eye, Heart } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CategoryBadge } from "@/components/ideas/CategoryBadge";
+import { getAssetUrl } from "@/providers/directus";
 import { cn } from "@/lib/utils";
 
 const TIER_COLOR: Record<string, string> = {
@@ -18,6 +19,7 @@ export type TopReel = {
   ig_shortcode: string | null;
   ig_permalink: string | null;
   ig_posted_at: string | null;
+  thumbnail_file: string | null;
   thumbnail_url: string | null;
   ig_caption_preview: string | null;
   views: number | null;
@@ -43,12 +45,14 @@ export function TopReelCard({ reel, onClick }: TopReelCardProps) {
     ? TIER_COLOR[reel.viral_tier] ?? "bg-muted text-foreground"
     : "bg-muted text-foreground";
 
+  const thumb = getAssetUrl(reel.thumbnail_file) ?? reel.thumbnail_url;
+
   const CardInner = (
     <>
       <div className="relative aspect-[9/16] w-full overflow-hidden bg-muted">
-        {reel.thumbnail_url ? (
+        {thumb ? (
           <img
-            src={reel.thumbnail_url}
+            src={thumb}
             alt=""
             loading="lazy"
             className="absolute inset-0 h-full w-full object-cover"
