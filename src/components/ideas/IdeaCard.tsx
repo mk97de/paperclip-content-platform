@@ -42,6 +42,7 @@ export type HookIdea = {
   status: "new" | "liked" | "dismissed" | "used";
   martin_feedback: string | null;
   scraped_hook_source_id: number | null;
+  source_ig_media_id?: string | null;
   eval_score?: number | null;
   date_created?: string | null;
   feedback_intent?: FeedbackIntent;

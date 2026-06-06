@@ -12,6 +12,7 @@ import routerProvider, {
 
 import {
   Inbox,
+  Sparkles,
   Heart,
   MessageSquare,
   Trash2,
@@ -30,6 +31,7 @@ import {
 import { Login } from "./pages/login";
 import {
   IdeasList,
+  IdeasOwn,
   IdeasLiked,
   IdeasCommented,
   IdeasDismissed,
@@ -56,6 +58,7 @@ import "./App.css";
 
 const ROUTE_TITLES: Record<string, string> = {
   "/ideas": "Inbox",
+  "/ideas/own": "Lexis Top-Content",
   "/ideas/liked": "Gefällt mir",
   "/ideas/commented": "Kommentiert",
   "/ideas/dismissed": "Verworfen",
@@ -95,6 +98,15 @@ function App() {
                   meta: {
                     label: "Inbox",
                     icon: <Inbox className="h-4 w-4" />,
+                    parent: "ideen-group",
+                  },
+                },
+                {
+                  name: "ideas-own",
+                  list: "/ideas/own",
+                  meta: {
+                    label: "Lexis Top-Content",
+                    icon: <Sparkles className="h-4 w-4" />,
                     parent: "ideen-group",
                   },
                 },
@@ -255,6 +267,7 @@ function App() {
                     element={<NavigateToResource resource="hook_ideas" />}
                   />
                   <Route path="/ideas" element={<IdeasList />} />
+                  <Route path="/ideas/own" element={<IdeasOwn />} />
                   <Route path="/ideas/liked" element={<IdeasLiked />} />
                   <Route path="/ideas/commented" element={<IdeasCommented />} />
                   <Route path="/ideas/dismissed" element={<IdeasDismissed />} />

@@ -72,6 +72,9 @@ type Props = {
   variant: IdeaCardVariant;
   emptyTitle: string;
   emptyDescription?: string;
+  // ownMode: eigene Ideen (source_ig_media_id gesetzt), Quelle = ig_post_performance
+  // statt scraped_hooks. Buendel O Phase 4c "Lexis Top-Content".
+  ownMode?: boolean;
 };
 
 const IDEA_FIELDS = [
@@ -84,6 +87,7 @@ const IDEA_FIELDS = [
   "status",
   "martin_feedback",
   "scraped_hook_source_id",
+  "source_ig_media_id",
   "eval_score",
   "date_created",
   "feedback_intent",
@@ -98,6 +102,7 @@ export function IdeasGrid({
   variant,
   emptyTitle,
   emptyDescription,
+  ownMode = false,
 }: Props) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackIdea, setFeedbackIdea] = useState<HookIdea | null>(null);
@@ -111,7 +116,7 @@ export function IdeasGrid({
     () => new Set(VIRAL_TIER_DEFAULT)
   );
 
-  const filterKey = `${status ?? "any"}-${onlyCommented ? "commented" : "all"}`;
+  const filterKey = `${status ?? "any"}-${onlyCommented ? "commented" : "all"}-${ownMode ? "own" : "scraped"}`;
 
   const {
     data: ideasData,
@@ -126,6 +131,9 @@ export function IdeasGrid({
       if (onlyCommented) filter.martin_feedback = { _nnull: true };
       // Inbox: bewertete (Kommentar gesetzt) Ideen ausblenden — wandern zur Commented-View
       if (status === "new") filter.martin_feedback = { _null: true };
+      // Eigen vs. scraped strikt trennen: /ideas/own zeigt nur eigene, alle anderen
+      // Views nur scraped (sonst tauchen Lexis Eigen-Ideen in der normalen Inbox auf).
+      filter.source_ig_media_id = ownMode ? { _nnull: true } : { _null: true };
       return directusClient.request(
         readItems("hook_ideas" as never, {
           filter,
@@ -140,22 +148,89 @@ export function IdeasGrid({
 
   const allIdeas = ideasData ?? [];
 
+  // Quellen-Schluessel pro Idee: eigen → ig_media_id (string), scraped → id (number).
+  const srcKey = (i: HookIdea): number | string | null =>
+    ownMode ? i.source_ig_media_id ?? null : i.scraped_hook_source_id ?? null;
+
   const sourceIds = useMemo(
     () =>
       Array.from(
         new Set(
           allIdeas
-            .map((i) => i.scraped_hook_source_id)
-            .filter((x): x is number => typeof x === "number")
+            .map(srcKey)
+            .filter((x): x is number | string => x !== null)
         )
       ),
-    [allIdeas]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allIdeas, ownMode]
   );
 
-  const { data: scrapedHooks } = useQuery({
-    queryKey: ["scraped_hooks_for_ideas", sourceIds.sort().join(",")],
+  const { data: sources } = useQuery({
+    queryKey: [
+      ownMode ? "own_perf_for_ideas" : "scraped_hooks_for_ideas",
+      sourceIds.map(String).sort().join(","),
+    ],
     queryFn: async () => {
       if (sourceIds.length === 0) return [] as ScrapedHook[];
+      if (ownMode) {
+        // Eigene Quelle: ig_post_performance (Zeitreihe) → juengster Snapshot pro
+        // ig_media_id, adaptiert in die ScrapedHook-Form, die ReelGroupCard rendert.
+        const rows = (await directusClient.request(
+          readItems("ig_post_performance" as never, {
+            filter: { ig_media_id: { _in: sourceIds } },
+            fields: [
+              "ig_media_id",
+              "ig_shortcode",
+              "ig_permalink",
+              "ig_posted_at",
+              "viral_tier",
+              "visual_hook_text",
+              "ig_caption_full",
+              "ig_caption_preview",
+              "thumbnail_file",
+              "thumbnail_url",
+              "views",
+              "total_views",
+              "captured_at",
+            ],
+            limit: -1,
+          } as never)
+        )) as Array<Record<string, unknown>>;
+        const latest = new Map<string, Record<string, unknown>>();
+        for (const r of rows) {
+          const mid = r.ig_media_id as string;
+          const prev = latest.get(mid);
+          if (!prev || String(r.captured_at ?? "") > String(prev.captured_at ?? "")) {
+            latest.set(mid, r);
+          }
+        }
+        return Array.from(latest.values()).map((r) => ({
+          id: 0,
+          _ownKey: r.ig_media_id as string,
+          hook_text: null,
+          visual_hook_text: (r.visual_hook_text as string) ?? null,
+          full_caption:
+            (r.ig_caption_full as string) ?? (r.ig_caption_preview as string) ?? null,
+          post_url:
+            (r.ig_permalink as string) ??
+            (r.ig_shortcode
+              ? `https://www.instagram.com/reel/${r.ig_shortcode}/`
+              : null),
+          account_username: "alexandra.anthopoulou",
+          viral_tier: (r.viral_tier as string) ?? null,
+          roll_type: null,
+          image_url: null,
+          thumbnail_url: (r.thumbnail_url as string) ?? null,
+          thumbnail_file: (r.thumbnail_file as string) ?? null,
+          posted_at: (r.ig_posted_at as string) ?? null,
+          views_count: (r.views as number) ?? (r.total_views as number) ?? null,
+          hook_type: null,
+          hook_structure: null,
+          transcript_first_30s: null,
+          spoken_hook: null,
+          spoken_hook_de: null,
+        })) as unknown as ScrapedHook[];
+      }
       return directusClient.request(
         readItems("scraped_hooks" as never, {
           filter: { id: { _in: sourceIds } },
@@ -188,10 +263,15 @@ export function IdeasGrid({
   });
 
   const sourceMap = useMemo(() => {
-    const m = new Map<number, ScrapedHook>();
-    (scrapedHooks ?? []).forEach((s) => m.set(s.id, s));
+    const m = new Map<number | string, ScrapedHook>();
+    (sources ?? []).forEach((s) => {
+      const key = ownMode
+        ? (s as unknown as { _ownKey: string })._ownKey
+        : s.id;
+      m.set(key, s);
+    });
     return m;
-  }, [scrapedHooks]);
+  }, [sources, ownMode]);
 
   const timeRangeCutoffMs = useMemo(() => {
     const opt = TIME_RANGE_OPTIONS.find((o) => o.value === timeRangeFilter);
@@ -199,9 +279,10 @@ export function IdeasGrid({
     return Date.now() - opt.days * 24 * 60 * 60 * 1000;
   }, [timeRangeFilter]);
 
-  const getPostedAtMs = (idea: HookIdea, map: Map<number, ScrapedHook>): number => {
-    if (!idea.scraped_hook_source_id) return 0;
-    const src = map.get(idea.scraped_hook_source_id);
+  const getPostedAtMs = (idea: HookIdea, map: Map<number | string, ScrapedHook>): number => {
+    const k = srcKey(idea);
+    if (k === null) return 0;
+    const src = map.get(k);
     if (!src?.posted_at) return 0;
     const t = new Date(src.posted_at).getTime();
     return Number.isFinite(t) ? t : 0;
@@ -225,9 +306,8 @@ export function IdeasGrid({
   const ideasBeforeCreator = useMemo(() => {
     return allIdeas.filter((i) => {
       if (categoryFilter && i.category !== categoryFilter) return false;
-      const src = i.scraped_hook_source_id
-        ? sourceMap.get(i.scraped_hook_source_id)
-        : undefined;
+      const k = srcKey(i);
+      const src = k !== null ? sourceMap.get(k) : undefined;
       if (formatFilter !== "all" && src?.roll_type !== formatFilter) return false;
       if (timeRangeCutoffMs !== null) {
         const paMs = getPostedAtMs(i, sourceMap);
@@ -257,8 +337,9 @@ export function IdeasGrid({
   const availableCreators = useMemo(() => {
     const counts = new Map<string, number>();
     ideasBeforeCreator.forEach((i) => {
-      if (!i.scraped_hook_source_id) return;
-      const src = sourceMap.get(i.scraped_hook_source_id);
+      const k = srcKey(i);
+      if (k === null) return;
+      const src = sourceMap.get(k);
       if (!src?.account_username) return;
       counts.set(src.account_username, (counts.get(src.account_username) ?? 0) + 1);
     });
@@ -270,9 +351,8 @@ export function IdeasGrid({
   const ideas = useMemo(() => {
     const filtered = ideasBeforeCreator.filter((i) => {
       if (creatorFilter.size === 0) return true;
-      const src = i.scraped_hook_source_id
-        ? sourceMap.get(i.scraped_hook_source_id)
-        : undefined;
+      const k = srcKey(i);
+      const src = k !== null ? sourceMap.get(k) : undefined;
       if (!src?.account_username) return false;
       return creatorFilter.has(src.account_username);
     });
@@ -299,10 +379,9 @@ export function IdeasGrid({
   const groupedReels = useMemo(() => {
     const groups = new Map<number | string, { source: ScrapedHook | undefined; ideas: HookIdea[] }>();
     ideas.forEach((idea) => {
-      const key = idea.scraped_hook_source_id ?? `_orphan_${idea.id}`;
-      const source = idea.scraped_hook_source_id
-        ? sourceMap.get(idea.scraped_hook_source_id)
-        : undefined;
+      const k = srcKey(idea);
+      const key = k ?? `_orphan_${idea.id}`;
+      const source = k !== null ? sourceMap.get(k) : undefined;
       const existing = groups.get(key);
       if (existing) {
         existing.ideas.push(idea);
@@ -542,7 +621,7 @@ export function IdeasGrid({
           <AnimatePresence mode="popLayout">
             {groupedReels.map((group) => (
               <ReelGroupCard
-                key={group.ideas[0].scraped_hook_source_id ?? `orphan-${group.ideas[0].id}`}
+                key={srcKey(group.ideas[0]) ?? `orphan-${group.ideas[0].id}`}
                 source={group.source}
                 ideas={group.ideas}
                 variant={variant}
