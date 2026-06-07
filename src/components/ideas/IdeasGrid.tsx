@@ -75,6 +75,9 @@ type Props = {
   // ownMode: eigene Ideen (source_ig_media_id gesetzt), Quelle = ig_post_performance
   // statt scraped_hooks. Buendel O Phase 4c "Lexis Top-Content".
   ownMode?: boolean;
+  // unified: gescrapte UND eigene Ideen zusammen (kein source_ig_media_id-Filter),
+  // Quellen aus beiden Collections laden. Nur "Gefällt mir" nutzt das.
+  unified?: boolean;
 };
 
 const IDEA_FIELDS = [
@@ -103,6 +106,7 @@ export function IdeasGrid({
   emptyTitle,
   emptyDescription,
   ownMode = false,
+  unified = false,
 }: Props) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackIdea, setFeedbackIdea] = useState<HookIdea | null>(null);
@@ -116,7 +120,7 @@ export function IdeasGrid({
     () => new Set(VIRAL_TIER_DEFAULT)
   );
 
-  const filterKey = `${status ?? "any"}-${onlyCommented ? "commented" : "all"}-${ownMode ? "own" : "scraped"}`;
+  const filterKey = `${status ?? "any"}-${onlyCommented ? "commented" : "all"}-${unified ? "unified" : ownMode ? "own" : "scraped"}`;
 
   const {
     data: ideasData,
@@ -133,7 +137,9 @@ export function IdeasGrid({
       if (status === "new") filter.martin_feedback = { _null: true };
       // Eigen vs. scraped strikt trennen: /ideas/own zeigt nur eigene, alle anderen
       // Views nur scraped (sonst tauchen Lexis Eigen-Ideen in der normalen Inbox auf).
-      filter.source_ig_media_id = ownMode ? { _nnull: true } : { _null: true };
+      // unified ("Gefällt mir"): beide Quellen zeigen → kein source_ig_media_id-Filter.
+      if (!unified)
+        filter.source_ig_media_id = ownMode ? { _nnull: true } : { _null: true };
       return directusClient.request(
         readItems("hook_ideas" as never, {
           filter,
@@ -149,8 +155,12 @@ export function IdeasGrid({
   const allIdeas = ideasData ?? [];
 
   // Quellen-Schluessel pro Idee: eigen → ig_media_id (string), scraped → id (number).
-  const srcKey = (i: HookIdea): number | string | null =>
-    ownMode ? i.source_ig_media_id ?? null : i.scraped_hook_source_id ?? null;
+  // unified: pro Idee anhand der gesetzten Quelle entscheiden (eigene haben
+  // source_ig_media_id, gescrapte scraped_hook_source_id).
+  const srcKey = (i: HookIdea): number | string | null => {
+    if (unified) return i.source_ig_media_id ?? i.scraped_hook_source_id ?? null;
+    return ownMode ? i.source_ig_media_id ?? null : i.scraped_hook_source_id ?? null;
+  };
 
   const sourceIds = useMemo(
     () =>
@@ -162,22 +172,26 @@ export function IdeasGrid({
         )
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [allIdeas, ownMode]
+    [allIdeas, ownMode, unified]
   );
 
   const { data: sources } = useQuery({
     queryKey: [
-      ownMode ? "own_perf_for_ideas" : "scraped_hooks_for_ideas",
+      unified
+        ? "unified_sources_for_ideas"
+        : ownMode
+          ? "own_perf_for_ideas"
+          : "scraped_hooks_for_ideas",
       sourceIds.map(String).sort().join(","),
     ],
     queryFn: async () => {
       if (sourceIds.length === 0) return [] as ScrapedHook[];
-      if (ownMode) {
-        // Eigene Quelle: ig_post_performance (Zeitreihe) → juengster Snapshot pro
-        // ig_media_id, adaptiert in die ScrapedHook-Form, die ReelGroupCard rendert.
+      // Eigene Quelle: ig_post_performance (Zeitreihe) → juengster Snapshot pro
+      // ig_media_id, adaptiert in die ScrapedHook-Form, die ReelGroupCard rendert.
+      const fetchOwn = async (ids: (number | string)[]): Promise<ScrapedHook[]> => {
         const rows = (await directusClient.request(
           readItems("ig_post_performance" as never, {
-            filter: { ig_media_id: { _in: sourceIds } },
+            filter: { ig_media_id: { _in: ids } },
             fields: [
               "ig_media_id",
               "ig_shortcode",
@@ -230,33 +244,46 @@ export function IdeasGrid({
           spoken_hook: null,
           spoken_hook_de: null,
         })) as unknown as ScrapedHook[];
+      };
+      const fetchScraped = async (ids: (number | string)[]): Promise<ScrapedHook[]> =>
+        directusClient.request(
+          readItems("scraped_hooks" as never, {
+            filter: { id: { _in: ids } },
+            fields: [
+              "id",
+              "hook_text",
+              "visual_hook_text",
+              "full_caption",
+              "post_url",
+              "account_username",
+              "viral_tier",
+              "roll_type",
+              "image_url",
+              "thumbnail_url",
+              "thumbnail_file",
+              "posted_at",
+              "views_count",
+              "hook_type",
+              "hook_structure",
+              "transcript_first_30s",
+              "spoken_hook",
+              "spoken_hook_de",
+            ],
+            limit: ids.length,
+          } as never)
+        ) as Promise<ScrapedHook[]>;
+      // unified: eigene Keys sind ig_media_id (string), gescrapte sind id (number).
+      // → beide Collections parallel laden und zusammenfuehren.
+      if (unified) {
+        const ownIds = sourceIds.filter((x) => typeof x === "string");
+        const scrapedIds = sourceIds.filter((x) => typeof x === "number");
+        const [own, scraped] = await Promise.all([
+          ownIds.length ? fetchOwn(ownIds) : Promise.resolve([] as ScrapedHook[]),
+          scrapedIds.length ? fetchScraped(scrapedIds) : Promise.resolve([] as ScrapedHook[]),
+        ]);
+        return [...own, ...scraped];
       }
-      return directusClient.request(
-        readItems("scraped_hooks" as never, {
-          filter: { id: { _in: sourceIds } },
-          fields: [
-            "id",
-            "hook_text",
-            "visual_hook_text",
-            "full_caption",
-            "post_url",
-            "account_username",
-            "viral_tier",
-            "roll_type",
-            "image_url",
-            "thumbnail_url",
-            "thumbnail_file",
-            "posted_at",
-            "views_count",
-            "hook_type",
-            "hook_structure",
-            "transcript_first_30s",
-            "spoken_hook",
-            "spoken_hook_de",
-          ],
-          limit: sourceIds.length,
-        } as never)
-      ) as Promise<ScrapedHook[]>;
+      return ownMode ? fetchOwn(sourceIds) : fetchScraped(sourceIds);
     },
     enabled: sourceIds.length > 0,
     staleTime: 60_000,
@@ -265,13 +292,12 @@ export function IdeasGrid({
   const sourceMap = useMemo(() => {
     const m = new Map<number | string, ScrapedHook>();
     (sources ?? []).forEach((s) => {
-      const key = ownMode
-        ? (s as unknown as { _ownKey: string })._ownKey
-        : s.id;
+      // Eigene Quellen tragen _ownKey (ig_media_id), gescrapte ihre numerische id.
+      const key = (s as unknown as { _ownKey?: string })._ownKey ?? s.id;
       m.set(key, s);
     });
     return m;
-  }, [sources, ownMode]);
+  }, [sources]);
 
   const timeRangeCutoffMs = useMemo(() => {
     const opt = TIME_RANGE_OPTIONS.find((o) => o.value === timeRangeFilter);
