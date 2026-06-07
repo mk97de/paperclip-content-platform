@@ -13,6 +13,7 @@ import routerProvider, {
 import {
   Inbox,
   Sparkles,
+  FileText,
   Heart,
   MessageSquare,
   Trash2,
@@ -32,6 +33,7 @@ import { Login } from "./pages/login";
 import {
   IdeasList,
   IdeasOwn,
+  IdeasOwnCaptions,
   IdeasLiked,
   IdeasCommented,
   IdeasDismissed,
@@ -59,6 +61,7 @@ import "./App.css";
 const ROUTE_TITLES: Record<string, string> = {
   "/ideas": "Inbox",
   "/ideas/own": "Lexis Top-Content",
+  "/ideas/own/captions": "Caption-Review",
   "/ideas/liked": "Gefällt mir",
   "/ideas/commented": "Kommentiert",
   "/ideas/dismissed": "Verworfen",
@@ -107,6 +110,15 @@ function App() {
                   meta: {
                     label: "Lexis Top-Content",
                     icon: <Sparkles className="h-4 w-4" />,
+                    parent: "ideen-group",
+                  },
+                },
+                {
+                  name: "ideas-own-captions",
+                  list: "/ideas/own/captions",
+                  meta: {
+                    label: "Caption-Review",
+                    icon: <FileText className="h-4 w-4" />,
                     parent: "ideen-group",
                   },
                 },
@@ -268,6 +280,7 @@ function App() {
                   />
                   <Route path="/ideas" element={<IdeasList />} />
                   <Route path="/ideas/own" element={<IdeasOwn />} />
+                  <Route path="/ideas/own/captions" element={<IdeasOwnCaptions />} />
                   <Route path="/ideas/liked" element={<IdeasLiked />} />
                   <Route path="/ideas/commented" element={<IdeasCommented />} />
                   <Route path="/ideas/dismissed" element={<IdeasDismissed />} />
