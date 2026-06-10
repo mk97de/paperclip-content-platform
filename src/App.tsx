@@ -26,6 +26,7 @@ import {
   Brain,
   Search,
   TrendingUp,
+  Mic,
   HelpCircle,
 } from "lucide-react";
 
@@ -48,6 +49,7 @@ import {
   InsightsLearnings,
 } from "./pages/insights";
 import { TrendsScraped, TrendsTop } from "./pages/trends";
+import { ContentYapping } from "./pages/content";
 import { HilfePatterns } from "./pages/hilfe";
 
 import { ErrorComponent } from "./components/refine-ui/layout/error-component";
@@ -65,6 +67,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/ideas/liked": "Gefällt mir",
   "/ideas/commented": "Kommentiert",
   "/ideas/dismissed": "Verworfen",
+  "/content/yapping": "Yapping",
   "/pipeline": "Pipeline",
   "/calendar": "Kalender",
   "/archive": "Archiv",
@@ -153,6 +156,15 @@ function App() {
                 {
                   name: "content-group",
                   meta: { label: "Content", group: true },
+                },
+                {
+                  name: "content-yapping",
+                  list: "/content/yapping",
+                  meta: {
+                    label: "Yapping",
+                    icon: <Mic className="h-4 w-4" />,
+                    parent: "content-group",
+                  },
                 },
                 {
                   name: "pipeline",
@@ -287,6 +299,7 @@ function App() {
                   <Route path="/pipeline" element={<PipelineList />} />
                   <Route path="/calendar" element={<CalendarList />} />
                   <Route path="/archive" element={<ArchiveList />} />
+                  <Route path="/content/yapping" element={<ContentYapping />} />
                   <Route
                     path="/insights/performance"
                     element={<InsightsPerformance />}
