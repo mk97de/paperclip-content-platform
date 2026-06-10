@@ -352,6 +352,21 @@ export function YapReviewCard({ yap }: { yap: YapIdea }) {
                 <ThumbsDown className="h-3.5 w-3.5 mr-1" />
                 Verwerfen
               </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full h-8 text-xs"
+                disabled={busy}
+                onClick={() =>
+                  patch({ status: "dismissed" }, "Verworfen — Notiz folgt", () => {
+                    setDismissMenuOpen(false);
+                    setFeedbackOpen(true);
+                  })
+                }
+              >
+                <MessageSquare className="h-3.5 w-3.5 mr-1" />
+                Verwerfen — mit Begründung
+              </Button>
             </div>
           )}
 
