@@ -145,7 +145,10 @@ export function IdeasGrid({
           filter,
           fields: IDEA_FIELDS,
           sort: ["-date_created"],
-          limit: 200,
+          // 200 kappte die Inbox still: bei 321 offenen Ideen fielen 121 raus, ohne dass
+          // die Kopfzeile es zeigt (sie zaehlt nur das Geladene). Muss ueber dem groessten
+          // realistischen Inbox-Stand liegen, sonst verdeckt ein neuer Schwung den alten.
+          limit: 500,
         } as never)
       ) as Promise<HookIdea[]>;
     },
