@@ -7,26 +7,15 @@ Codex und Claude lesen dieselbe Datei: Codex direkt, Claude über `CLAUDE.md` (S
 `@AGENTS.md`). Globale Regeln stehen in `~/.claude/CLAUDE.md` + `~/.claude/rules/` und für
 Codex in `~/.codex/AGENTS.md`; hier steht nur, was dieses Repo betrifft.
 
-## Session-Protokoll
+## Gemeinsamer Arbeitsvertrag
 
-Ein Workstream trägt seinen Zustand in `docs/<ws>/CONTINUITY.md` (aktive Datei) und
-`docs/<ws>/sessions/` (eine unveränderliche Akte je Session). Git plus diese Datei sind kanonisch.
-
-- **Start:** `/session-start <Startprompt>` (Claude) bzw. `$session-start <Startprompt>` (Codex).
-  Read-only; einziger Schreibvorgang ist die Lock-Datei `docs/<ws>/.session-lock`.
-- **Ende:** nur auf ausdrücklichen Aufruf `/session-end` bzw. `$session-end`. Ein Abschied,
-  ein erledigter letzter Punkt oder Token-Nähe lösen es nicht aus.
-- **Neuer Workstream:** Startprompt mit `Handoff-ID: BOOTSTRAP`; der Start legt die Continuity an.
-- Ein lebender fremder Lock heißt: fremde Dateien im `git status` liegen lassen und melden.
-
-## Git
-
-Der Session-Abschluss ist der einzige Commit-Pfad: session-eigene Pfade namentlich stagen,
-normal committen, Branch pushen, Remote-SHA verifizieren.
-
-Ausgeschlossen: `git add -A` · `--no-verify` · Force in jeder Form · Tags · Branchlöschung ·
-geratener Ref · Branchwechsel im Arbeits-Worktree · Reset · Clean · Deploy als Nebenwirkung.
-Fremde dirty oder staged Dateien werden gemeldet, nie mitgenommen; unklare Eigentümerschaft stoppt.
+Für Codex und Claude gelten `~/.claude/rules/karpathy-principles.md` und
+`~/.claude/rules/session-protocols.md`; vor relevanter Arbeit lesen, falls nicht bereits geladen.
+Ein konkreter Start-Slice wird nach der Rekonstruktion ausgeführt. Abschluss auf Auftrag oder
+nach verifiziertem festen Ziel; konkrete Read-only-, Git- und Fachgrenzen bleiben erhalten.
+Git und `docs/<ws>/CONTINUITY.md` sind kanonisch; Board und Memory sind optional.
+Git-Schreibaktionen nur durch den bestehenden `session_git_close.py`, eigene Pfade einzeln,
+normaler Push mit Remote-Nachweis. Fremde Änderungen und lebende Locks erhalten.
 
 ## Vor der Arbeit lesen
 
